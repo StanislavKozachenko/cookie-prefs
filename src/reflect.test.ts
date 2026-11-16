@@ -1,3 +1,4 @@
+import { parse } from 'acorn';
 import { afterEach, describe, expect, it } from 'vitest';
 import * as z from 'zod';
 import { definePrefs, pref, prefsScript, type PrefsRecord } from './index';
@@ -39,6 +40,16 @@ const make = () =>
     },
     { prefix: 'app.' },
   );
+
+const hostile = '</script><script>alert(1)</script>';
+
+const makeHostile = () =>
+  definePrefs({
+    x: pref
+      .enum([hostile, 'b'])
+      .default(hostile)
+      .reflect('data-x', { b: '<!-- &    -->' }),
+  });
 
 describe('prefsScript', () => {
   it('returns an empty string when no pref reflects', () => {
@@ -136,9 +147,21 @@ describe('prefsScript', () => {
     expect(html.getAttribute('data-good')).toBe('true');
   });
 
-  it('is fixed ES5 code plus JSON config', () => {
+  it('parses as ES5 for every config', () => {
+    // It runs before any transpiled code, so it must be ES5 as a whole, config included.
+    const configs: PrefsRecord[] = [
+      {},
+      definePrefs({ a: pref.string(), b: pref.number().default(1) }),
+      make(),
+      makeHostile(),
+      definePrefs({ t: pref.enum(['a', 'b']).options({ name: 'tt' }).reflect('data-t') }),
+    ];
+    for (const prefs of configs)
+      expect(() => parse(prefsScript(prefs), { ecmaVersion: 5, sourceType: 'script' })).not.toThrow();
+  });
+
+  it('is fixed code plus JSON config', () => {
     const src = prefsScript(make());
-    expect(src).not.toMatch(/=>|`|\blet\b|\bconst\b|\bclass\s+\w|\.\.\./);
     expect(src).toMatch(/^\(function\(P\)\{.*\}catch\(e\)\{\}\}\)\(\[.*\]\)$/);
     expect(src).not.toContain('function ' + 'anonymous');
     const config = JSON.parse(src.slice(src.indexOf('})([') + 3, -1)) as unknown[];
@@ -147,13 +170,7 @@ describe('prefsScript', () => {
   });
 
   it('escapes hostile values so the script is safe to inline in HTML', () => {
-    const hostile = '</script><script>alert(1)</script>';
-    const prefs = definePrefs({
-      x: pref
-        .enum([hostile, 'b'])
-        .default(hostile)
-        .reflect('data-x', { b: '<!-- & \u2028\u2029 -->' }),
-    });
+    const prefs = makeHostile();
     const src = prefsScript(prefs);
     expect(src).not.toMatch(/[<>\u2028\u2029]/);
     expect(src.slice(src.indexOf('})(['))).not.toContain('&');
