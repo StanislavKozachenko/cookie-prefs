@@ -1,0 +1,121 @@
+{
+  "name": "prefkit",
+  "version": "0.0.0",
+  "description": "Typed cookie-backed user preference state for React and Next.js",
+  "keywords": [
+    "react",
+    "nextjs",
+    "cookies",
+    "preferences",
+    "theme",
+    "next-themes",
+    "server-components",
+    "typescript"
+  ],
+  "license": "MIT",
+  "author": "Stanislav Kozachenko",
+  "homepage": "https://github.com/StanislavKozachenko/prefkit#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/StanislavKozachenko/prefkit.git"
+  },
+  "bugs": {
+    "url": "https://github.com/StanislavKozachenko/prefkit/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./react": {
+      "import": {
+        "types": "./dist/react/index.d.ts",
+        "default": "./dist/react/index.js"
+      },
+      "require": {
+        "types": "./dist/react/index.d.cts",
+        "default": "./dist/react/index.cjs"
+      }
+    },
+    "./next": {
+      "import": {
+        "types": "./dist/next/index.d.ts",
+        "default": "./dist/next/index.js"
+      },
+      "require": {
+        "types": "./dist/next/index.d.cts",
+        "default": "./dist/next/index.cjs"
+      }
+    },
+    "./theme": {
+      "import": {
+        "types": "./dist/theme/index.d.ts",
+        "default": "./dist/theme/index.js"
+      },
+      "require": {
+        "types": "./dist/theme/index.d.cts",
+        "default": "./dist/theme/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "size": "size-limit",
+    "check:package": "publint && attw --pack . --profile node16"
+  },
+  "size-limit": [
+    {
+      "name": "prefkit (core)",
+      "path": "dist/index.js",
+      "limit": "2 KB",
+      "gzip": true
+    }
+  ],
+  "peerDependencies": {
+    "next": ">=14",
+    "react": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "next": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.5",
+    "@eslint/js": "^10.0.1",
+    "@size-limit/preset-small-lib": "^14.3.0",
+    "@types/node": "^26.6.6",
+    "eslint": "^10.15.0",
+    "jsdom": "^31.0.1",
+    "publint": "^0.3.25",
+    "size-limit": "^14.3.0",
+    "tsup": "^9.0.0",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.2",
+    "vitest": "^5.1.0"
+  }
+}
