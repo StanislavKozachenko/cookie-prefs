@@ -1,4 +1,4 @@
-import { act, StrictMode, type ReactNode } from 'react';
+import { act, StrictMode, version, type ReactNode } from 'react';
 import { createRoot, hydrateRoot, type Root } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
@@ -175,7 +175,8 @@ describe('inline script', () => {
     expect(errors).not.toHaveBeenCalled();
   });
 
-  it('a plain client-rendered script does warn (control for the test above)', () => {
+  // React 19 added the "Encountered a script tag" warning; React 18 never emits it.
+  it.skipIf(Number(version.split('.')[0]) < 19)('a plain client-rendered script does warn (control for the test above)', () => {
     const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
     render(<script dangerouslySetInnerHTML={{ __html: '1' }} />);
     expect(errors.mock.calls.flat().join()).toContain('Encountered a script tag');
