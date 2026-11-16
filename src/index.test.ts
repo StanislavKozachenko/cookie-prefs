@@ -1,6 +1,12 @@
 import { expect, it } from 'vitest';
-import { VERSION } from './index';
+import * as entry from './index';
 
-it('exports the version', () => {
-  expect(VERSION).toBe('0.0.0');
+it('exports the core api', () => {
+  expect(Object.keys(entry).sort()).toEqual([
+    'definePrefs',
+    'pref',
+    'prefsScript',
+    'readPrefs',
+    'snapshotPrefs',
+  ]);
 });

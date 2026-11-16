@@ -1,0 +1,206 @@
+/** Value of the `SameSite` cookie attribute. */
+export type CookieSameSite = 'lax' | 'strict' | 'none';
+
+/**
+ * Cookie attributes for pref cookies. Prefs are never `HttpOnly`: the browser must
+ * read and write them, so they are visible to any script on the page. Never store
+ * secrets or session data in a pref.
+ */
+export interface CookieOptions {
+  /** @default '/' */
+  path?: string;
+  /** Omitted by default, which scopes the cookie to the current host. */
+  domain?: string;
+  /** Lifetime in seconds. Browsers cap it at 400 days. @default 34560000 (400 days) */
+  maxAge?: number;
+  /** @default 'lax' */
+  sameSite?: CookieSameSite;
+  /**
+   * Send only over HTTPS. When unset, browser writes add `Secure` on `https:` pages
+   * and `toCookie()` omits it.
+   */
+  secure?: boolean;
+  /** CHIPS partitioned cookie. @default false */
+  partitioned?: boolean;
+}
+
+/** Options for a whole set of prefs, passed to `definePrefs()`. */
+export interface PrefsOptions extends CookieOptions {
+  /**
+   * Prepended to every cookie name. Use it to avoid collisions on a shared domain
+   * (`'app.'`) or to opt into a cookie prefix (`'__Host-'`, which also needs
+   * `secure: true` and no `domain`).
+   * @default ''
+   */
+  prefix?: string;
+}
+
+/** Options for a single pref, passed to `.options()`. They override `PrefsOptions`. */
+export interface PrefOptions extends CookieOptions {
+  /** Full cookie name for this pref. `prefix` is not applied to it. @default prefix + key */
+  name?: string;
+}
+
+/**
+ * A cookie ready to be set by a server framework. Structurally compatible with
+ * Next.js `cookies().set(init)` and `ResponseCookies.set(init)`.
+ */
+export interface CookieInit {
+  name: string;
+  value: string;
+  path: string;
+  maxAge: number;
+  sameSite: CookieSameSite;
+  domain?: string;
+  secure?: boolean;
+  partitioned?: boolean;
+}
+
+/** Anything that can give a cookie value by name. `get` matches Next.js `cookies()` and `request.cookies`. */
+export interface CookieGetter {
+  get(name: string): { readonly value: string } | undefined;
+}
+
+/**
+ * Where to read request cookies from on the server:
+ * a `Cookie` header string, a cookie store with `get(name)` (Next.js `cookies()`,
+ * `NextRequest.cookies`), or a plain name-to-value map. `null` and `undefined` read
+ * as "no cookies", so every pref resolves to its default.
+ */
+export type CookieSource =
+  | string
+  | CookieGetter
+  | Readonly<Record<string, string | undefined>>
+  | null
+  | undefined;
+
+/**
+ * Raw cookie values of a set of prefs, keyed by cookie name. Serializable, so it can
+ * cross the Server Component to Client Component boundary. Holds only the prefs'
+ * own cookies, never the rest of the request's cookies.
+ */
+export type PrefsSnapshot = Readonly<Record<string, string>>;
+
+/** Where a pref is mirrored on `<html>`: a `data-*` attribute or a CSS custom property. */
+export type ReflectTarget = `data-${string}` | `--${string}`;
+
+/** Phantom type carrier: `T` is what you can write, `V` is what you read back. */
+export interface PrefTypes<T, V> {
+  readonly value: T;
+  readonly output: V;
+}
+
+/**
+ * An unbound pref definition, created by `pref.*`. Builders are immutable: every
+ * method returns a new builder. Pass builders to `definePrefs()` to get handles.
+ */
+export interface PrefBuilder<T, V = T | undefined> {
+  /** Type-only marker for inference. Never set at runtime. */
+  readonly '~types'?: PrefTypes<T, V>;
+  /** Value used when the cookie is missing or invalid. Removes `undefined` from the read type. */
+  default(value: T): PrefBuilder<T, T>;
+  /** Cookie name and attributes for this pref. */
+  options(options: PrefOptions): PrefBuilder<T, V>;
+}
+
+/** Builder for `boolean`, `number` and `string` prefs, which can be mirrored on `<html>`. */
+export interface ScalarPrefBuilder<T extends string | number | boolean, V = T | undefined>
+  extends PrefBuilder<T, V> {
+  default(value: T): ScalarPrefBuilder<T, T>;
+  options(options: PrefOptions): ScalarPrefBuilder<T, V>;
+  /**
+   * Mirror the value on `<html>` before first paint (inline script) and after every
+   * change. A missing cookie with no default removes the attribute.
+   * @example pref.boolean().default(true).reflect('data-sidebar') // <html data-sidebar="true">
+   */
+  reflect(target: ReflectTarget | readonly ReflectTarget[]): ScalarPrefBuilder<T, V>;
+}
+
+/** Target accepted by `EnumPrefBuilder.reflect()`. `'class'` swaps one class per value. */
+export type EnumReflectTarget = 'class' | ReflectTarget;
+
+/** Builder for `pref.enum()`. */
+export interface EnumPrefBuilder<T extends string, V = T | undefined> extends PrefBuilder<T, V> {
+  /** The allowed values, in declaration order. */
+  readonly values: readonly T[];
+  default(value: T): EnumPrefBuilder<T, T>;
+  options(options: PrefOptions): EnumPrefBuilder<T, V>;
+  /**
+   * Mirror the value on `<html>` before first paint (inline script) and after every
+   * change. `'class'` adds the current value as a class and removes the others.
+   * `value` maps a pref value to the string written to the DOM.
+   * @example pref.enum(['compact', 'cozy']).default('cozy').reflect('data-density')
+   */
+  reflect(
+    target: EnumReflectTarget | readonly EnumReflectTarget[],
+    value?: Partial<Record<T, string>>,
+  ): EnumPrefBuilder<T, V>;
+}
+
+/** A custom codec for `pref.custom()`. */
+export interface PrefCodec<T> {
+  /** Raw cookie value (already URI-decoded) to a value. Return `undefined` or throw to fall back to the default. */
+  parse(raw: string): T | undefined;
+  /** Value to the raw cookie string (URI-encoded by prefkit). */
+  serialize(value: T): string;
+}
+
+/** Writes a pref: a value, or an updater that receives the current value. */
+export type PrefSetter<T, V> = (value: T | ((prev: V) => T)) => void;
+
+/**
+ * A bound pref handle, one per key of `definePrefs()`. Usable outside React and
+ * passed as-is to `usePref()`. `T` is the writable type, `V` the read type
+ * (`T`, or `T | undefined` when there is no default).
+ */
+export interface Pref<T, V = T> {
+  /** Type-only marker for inference. Never set at runtime. */
+  readonly '~types'?: PrefTypes<T, V>;
+  /** Key in the `definePrefs()` shape. */
+  readonly key: string;
+  /** Cookie name (prefix + key, or the `name` option). */
+  readonly name: string;
+  /** Value returned when the cookie is missing or invalid. */
+  readonly defaultValue: V;
+  /**
+   * Current value from `document.cookie`. Returns the default where there is no
+   * DOM; on the server use `read()` instead.
+   */
+  get(): V;
+  /** Write the cookie in the browser and notify subscribers in this and other tabs. No-op on the server. */
+  set(value: T | ((prev: V) => T)): void;
+  /** Delete the cookie, so the value goes back to the default. No-op on the server. */
+  reset(): void;
+  /** Listen for changes from this tab and other tabs. Returns an unsubscribe function. */
+  subscribe(listener: (value: V) => void): () => void;
+  /** Read the value from request cookies. Pure; never throws. */
+  read(source: CookieSource): V;
+  /** Build the cookie for a server-side write, e.g. `(await cookies()).set(prefs.locale.toCookie('de'))`. */
+  toCookie(value: T): CookieInit;
+}
+
+/** Any bound pref handle. */
+export type AnyPref = Pref<unknown, unknown>;
+
+/** A record of bound handles, as returned by `definePrefs()`. */
+export type PrefsRecord = Readonly<Record<string, AnyPref>>;
+
+/** Any pref builder, as accepted by `definePrefs()`. */
+export type AnyPrefBuilder = PrefBuilder<unknown, unknown>;
+
+/** The shape passed to `definePrefs()`. */
+export type PrefShape = Readonly<Record<string, AnyPrefBuilder>>;
+
+/** Handles produced by `definePrefs()` from a shape. */
+export type Prefs<S extends PrefShape> = {
+  readonly [K in keyof S]: S[K] extends { readonly '~types'?: PrefTypes<infer T, infer V> }
+    ? Pref<T, V>
+    : never;
+};
+
+/** Read type of a single pref handle or builder. */
+export type PrefValue<P extends { readonly '~types'?: PrefTypes<unknown, unknown> }> =
+  NonNullable<P['~types']>['output'];
+
+/** Read types of a record of pref handles: `{ theme: 'light' | 'dark', ... }`. */
+export type PrefValues<P extends PrefsRecord> = { [K in keyof P]: PrefValue<P[K]> };

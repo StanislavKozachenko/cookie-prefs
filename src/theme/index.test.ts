@@ -1,6 +1,6 @@
-import * as entry from './index';
 import { expect, it } from 'vitest';
+import * as entry from './index';
 
-it('loads the theme entry', () => {
-  expect(entry).toBeDefined();
+it('exports the theme api', () => {
+  expect(Object.keys(entry).sort()).toEqual(['ThemeProvider', 'useTheme']);
 });
