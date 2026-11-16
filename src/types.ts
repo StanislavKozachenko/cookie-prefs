@@ -46,7 +46,13 @@ export interface PrefOptions extends CookieOptions {
  * Next.js `cookies().set(init)` and `ResponseCookies.set(init)`.
  */
 export interface CookieInit {
+  /** Cookie name, already URI-encoded (same as `Pref.name`). */
   name: string;
+  /**
+   * Serialized value, NOT URI-encoded: frameworks encode it on set (Next.js, Express
+   * `res.cookie`). When writing a raw `Set-Cookie` header yourself, pass it through
+   * `encodeURIComponent`, or prefkit reads it as invalid and falls back to the default.
+   */
   value: string;
   path: string;
   maxAge: number;
@@ -65,7 +71,9 @@ export interface CookieGetter {
  * Where to read request cookies from on the server:
  * a `Cookie` header string, a cookie store with `get(name)` (Next.js `cookies()`,
  * `NextRequest.cookies`), or a plain name-to-value map. `null` and `undefined` read
- * as "no cookies", so every pref resolves to its default.
+ * as "no cookies", so every pref resolves to its default. A header string is
+ * URI-decoded by prefkit; stores and maps must already hold URI-decoded values, as
+ * Next.js, Express and `snapshotPrefs()` do. Keys are cookie names (`Pref.name`).
  */
 export type CookieSource =
   | string
@@ -75,9 +83,10 @@ export type CookieSource =
   | undefined;
 
 /**
- * Raw cookie values of a set of prefs, keyed by cookie name. Serializable, so it can
- * cross the Server Component to Client Component boundary. Holds only the prefs'
- * own cookies, never the rest of the request's cookies.
+ * Raw cookie values of a set of prefs, keyed by cookie name (`Pref.name`). Values are
+ * URI-decoded, like the values of a cookie store. Serializable, so it can cross the
+ * Server Component to Client Component boundary. Holds only the prefs' own cookies,
+ * never the rest of the request's cookies.
  */
 export type PrefsSnapshot = Readonly<Record<string, string>>;
 
@@ -110,7 +119,9 @@ export interface ScalarPrefBuilder<T extends string | number | boolean, V = T | 
   options(options: PrefOptions): ScalarPrefBuilder<T, V>;
   /**
    * Mirror the value on `<html>` before first paint (inline script) and after every
-   * change. A missing cookie with no default removes the attribute.
+   * change. A missing cookie with no default removes the attribute. Changes from other
+   * tabs show up at once while something in this tab subscribes to the pref
+   * (`usePref`), otherwise when the tab becomes visible again (`PrefsProvider`).
    * @example pref.boolean().default(true).reflect('data-sidebar') // <html data-sidebar="true">
    */
   reflect(target: ReflectTarget | readonly ReflectTarget[]): ScalarPrefBuilder<T, V>;
@@ -128,7 +139,9 @@ export interface EnumPrefBuilder<T extends string, V = T | undefined> extends Pr
   /**
    * Mirror the value on `<html>` before first paint (inline script) and after every
    * change. `'class'` adds the current value as a class and removes the others.
-   * `value` maps a pref value to the string written to the DOM.
+   * `value` maps a pref value to the string written to the DOM. Changes from other
+   * tabs show up at once while something in this tab subscribes to the pref
+   * (`usePref`), otherwise when the tab becomes visible again (`PrefsProvider`).
    * @example pref.enum(['compact', 'cozy']).default('cozy').reflect('data-density')
    */
   reflect(
@@ -158,7 +171,10 @@ export interface Pref<T, V = T> {
   readonly '~types'?: PrefTypes<T, V>;
   /** Key in the `definePrefs()` shape. */
   readonly key: string;
-  /** Cookie name (prefix + key, or the `name` option). */
+  /**
+   * Cookie name (prefix + key, or the `name` option), URI-encoded: the exact name in
+   * `document.cookie`, the `Cookie` header and `PrefsSnapshot` keys.
+   */
   readonly name: string;
   /** Value returned when the cookie is missing or invalid. */
   readonly defaultValue: V;
@@ -173,9 +189,15 @@ export interface Pref<T, V = T> {
   reset(): void;
   /** Listen for changes from this tab and other tabs. Returns an unsubscribe function. */
   subscribe(listener: (value: V) => void): () => void;
-  /** Read the value from request cookies. Pure; never throws. */
+  /**
+   * Read the value from request cookies (stores and maps hold URI-decoded values).
+   * Pure; never throws. Cached per raw string, so the same cookie returns the same object.
+   */
   read(source: CookieSource): V;
-  /** Build the cookie for a server-side write, e.g. `(await cookies()).set(prefs.locale.toCookie('de'))`. */
+  /**
+   * Build the cookie for a server-side write, e.g. `(await cookies()).set(prefs.locale.toCookie('de'))`.
+   * `value` is not URI-encoded; frameworks encode it on set, raw `Set-Cookie` writers must.
+   */
   toCookie(value: T): CookieInit;
 }
 
