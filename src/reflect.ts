@@ -42,6 +42,8 @@ export const apply = (targets: readonly string[], kind: Kind | undefined, s: str
  * Fixed ES5 source of the pre-paint script, applied to a JSON array of `Reflection`.
  * Mirrors `rawOf` + the parsers + `apply`: decode, validate by kind, fall back to
  * the default, then write class / attribute / CSS variable on `<html>`.
+ * `src/react/reapply.ts` ports it to DOM calls and finds the config after the only
+ * `})(`: keep both in sync (parity test in `src/react/reapply.test.ts`).
  */
 const SOURCE =
   "(function(P){var d=document,h=d.documentElement,C='; '+d.cookie,i=0,j,p,m,v,n,t,k;" +

@@ -90,15 +90,31 @@ const render = (node: ReactNode) => {
   return container;
 };
 
-/** Every script element the provider inserts to run the reflection again. */
-const spyReruns = () => {
-  const reruns: HTMLScriptElement[] = [];
-  const append = document.head.appendChild.bind(document.head);
-  vi.spyOn(document.head, 'appendChild').mockImplementation((node) => {
-    if (node instanceof HTMLScriptElement) reruns.push(node);
-    return append(node);
-  });
-  return reruns;
+/**
+ * Enforced Trusted Types, as far as scripts go: assigning script text throws. Returns
+ * the restore function.
+ */
+const blockScriptText = () => {
+  const proto = HTMLScriptElement.prototype;
+  const keys = ['text', 'textContent', 'innerHTML'] as const;
+  const own = keys.map((key) => [key, Object.getOwnPropertyDescriptor(proto, key)] as const);
+  for (const key of keys) {
+    let from: object = proto;
+    let desc: PropertyDescriptor | undefined;
+    while (!(desc = Object.getOwnPropertyDescriptor(from, key))) from = Object.getPrototypeOf(from) as object;
+    Object.defineProperty(proto, key, {
+      configurable: true,
+      get: desc.get!,
+      set() {
+        throw new TypeError(`Failed to set '${key}': this document requires 'TrustedScript' assignment.`);
+      },
+    });
+  }
+  return () => {
+    for (const [key, desc] of own)
+      if (desc) Object.defineProperty(proto, key, desc);
+      else delete (proto as unknown as Record<string, unknown>)[key];
+  };
 };
 
 describe('hydration', () => {
@@ -160,9 +176,9 @@ describe('inline script', () => {
     const prefs = make();
     expect(ssr(<PrefsProvider nonce="abc">x</PrefsProvider>)).toBe('x');
     expect(ssr(<PrefsProvider script="">x</PrefsProvider>)).toBe('x');
-    const reruns = spyReruns();
-    render(<PrefsProvider>{prefs.theme.key}</PrefsProvider>);
-    expect(reruns).toEqual([]);
+    const container = render(<PrefsProvider>{prefs.theme.key}</PrefsProvider>);
+    expect(container.querySelector('script')).toBeNull();
+    expect(html.attributes).toHaveLength(0);
   });
 
   it('is an inert data block when rendered on the client, without the script warning', () => {
@@ -236,24 +252,51 @@ describe('reflection on <html>', () => {
     expect(html.getAttribute('data-sidebar')).toBe('false');
   });
 
-  it('reuses the server nonce, which the client never renders', async () => {
-    const prefs = make();
-    const markup = ssr(app(prefs, { nonce: 'abc' }));
-    const reruns = spyReruns();
-    // The client may not know the per-request nonce at all.
-    await hydrate(app(prefs), markup);
-    expect(reruns.length).toBeGreaterThan(0);
-    for (const s of reruns) {
-      expect(s.getAttribute('nonce')).toBe('abc');
-      expect(s.text).toBe(prefsScript(prefs));
-      expect(s.isConnected).toBe(false);
-    }
-  });
+  describe('under enforced Trusted Types', () => {
+    let restore = () => {};
+    afterEach(() => restore());
 
-  it('uses the nonce prop for a client-only mount', () => {
-    const prefs = make();
-    const reruns = spyReruns();
-    render(app(prefs, { nonce: 'xyz' }));
-    expect(reruns.map((s) => s.getAttribute('nonce'))).toEqual(['xyz']);
+    /** Server render, run the pre-paint script, then block script text like Trusted Types. */
+    const serve = (node: ReactNode) => {
+      const container = document.createElement('div');
+      container.innerHTML = ssr(node);
+      runServerScript(container);
+      restore = blockScriptText();
+      // control: the stub really blocks script text
+      for (const key of ['text', 'textContent', 'innerHTML'] as const)
+        expect(() => (document.createElement('script')[key] = '1')).toThrow(/TrustedScript/);
+      return container.innerHTML;
+    };
+
+    it('is re-applied on mount after the attributes were wiped, without a script', async () => {
+      const prefs = make();
+      document.cookie = 'theme=dark';
+      document.cookie = 'sidebar=false';
+      const node = bare(prefs, { nonce: 'abc' });
+      const markup = serve(node);
+      wipeHtml();
+      const create = vi.spyOn(document, 'createElement');
+      const { errors, recoverable } = await hydrate(node, markup);
+      expect(html.className).toBe('dark');
+      expect(html.getAttribute('data-sidebar')).toBe('false');
+      expect(create).not.toHaveBeenCalledWith('script');
+      expect(errors).not.toHaveBeenCalled();
+      expect(recoverable).not.toHaveBeenCalled();
+    });
+
+    it('follows other tabs when the tab becomes visible again', async () => {
+      const prefs = make();
+      const node = bare(prefs);
+      await hydrate(node, serve(node));
+      expect(html.className).toBe('system');
+      expect(html.getAttribute('data-sidebar')).toBe('true');
+
+      document.cookie = 'theme=light'; // another tab, nobody here subscribes
+      document.cookie = 'sidebar=false';
+      vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
+      document.dispatchEvent(new Event('visibilitychange'));
+      expect(html.className).toBe('light');
+      expect(html.getAttribute('data-sidebar')).toBe('false');
+    });
   });
 });
