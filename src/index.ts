@@ -1,1 +1,152 @@
-export const VERSION = '0.0.0';
+import type { InferSchemaOutput, StandardSchemaV1 } from './standard-schema';
+import type {
+  CookieSource,
+  EnumPrefBuilder,
+  PrefBuilder,
+  PrefCodec,
+  Prefs,
+  PrefShape,
+  PrefsOptions,
+  PrefsRecord,
+  PrefsSnapshot,
+  PrefValues,
+  ScalarPrefBuilder,
+} from './types';
+
+export type {
+  AnyPref,
+  AnyPrefBuilder,
+  CookieGetter,
+  CookieInit,
+  CookieOptions,
+  CookieSameSite,
+  CookieSource,
+  EnumPrefBuilder,
+  EnumReflectTarget,
+  Pref,
+  PrefBuilder,
+  PrefCodec,
+  PrefOptions,
+  Prefs,
+  PrefSetter,
+  PrefShape,
+  PrefsOptions,
+  PrefsRecord,
+  PrefsSnapshot,
+  PrefTypes,
+  PrefValue,
+  PrefValues,
+  ReflectTarget,
+  ScalarPrefBuilder,
+} from './types';
+export type { StandardSchemaV1 } from './standard-schema';
+
+const notImplemented = (): never => {
+  throw new Error('prefkit: not implemented');
+};
+
+/** Pref builders. Each returns an immutable builder to pass to `definePrefs()`. */
+export interface PrefFactory {
+  /**
+   * One of a fixed list of strings, stored as is. Any other cookie value reads as the default.
+   * @example pref.enum(['light', 'dark', 'system']).default('system')
+   */
+  enum<const T extends readonly [string, ...string[]]>(
+    values: T,
+  ): EnumPrefBuilder<T[number], T[number] | undefined>;
+  /**
+   * `true` or `false`, stored as `'true'` / `'false'`.
+   * @example pref.boolean().default(true)
+   */
+  boolean(): ScalarPrefBuilder<boolean>;
+  /**
+   * A finite number. `NaN` and `Infinity` read as the default.
+   * @example pref.number().default(25)
+   */
+  number(): ScalarPrefBuilder<number>;
+  /**
+   * Any string, stored URI-encoded.
+   * @example pref.string() // string | undefined
+   */
+  string(): ScalarPrefBuilder<string>;
+  /**
+   * A JSON value checked by any Standard Schema validator (zod, valibot, arktype).
+   * Validation must be synchronous; a schema that returns a Promise reads as the default.
+   * @example pref.json(z.array(z.string())).default([])
+   */
+  json<S extends StandardSchemaV1>(schema: S): PrefBuilder<InferSchemaOutput<S>>;
+  /**
+   * Your own codec. `parse` returning `undefined` or throwing reads as the default.
+   * @example pref.custom({ parse: (raw) => new Date(raw), serialize: (d) => d.toISOString() })
+   */
+  custom<T>(codec: PrefCodec<T>): PrefBuilder<T>;
+}
+
+/**
+ * Pref builders.
+ * @example
+ * const prefs = definePrefs({
+ *   theme: pref.enum(['light', 'dark', 'system']).default('system'),
+ *   sidebar: pref.boolean().default(true),
+ * })
+ */
+export const pref: PrefFactory = {
+  enum: notImplemented,
+  boolean: notImplemented,
+  number: notImplemented,
+  string: notImplemented,
+  json: notImplemented,
+  custom: notImplemented,
+};
+
+/**
+ * Bind pref builders to cookie names (`prefix + key`) and return one handle per key.
+ * Each pref is its own cookie. Call once at module level and import the result in
+ * both server and client code.
+ * @example
+ * export const prefs = definePrefs(
+ *   {
+ *     theme: pref.enum(['light', 'dark', 'system']).default('system').reflect('class'),
+ *     sidebar: pref.boolean().default(true),
+ *   },
+ *   { prefix: 'app.' },
+ * )
+ * prefs.sidebar.set((open) => !open)
+ */
+export function definePrefs<S extends PrefShape>(shape: S, options?: PrefsOptions): Prefs<S>;
+export function definePrefs(): never {
+  return notImplemented();
+}
+
+/**
+ * Read typed values of all prefs from request cookies. Pure; never throws.
+ * @example
+ * const { theme, sidebar } = readPrefs(prefs, request.headers.get('cookie'))
+ */
+export function readPrefs<P extends PrefsRecord>(prefs: P, source: CookieSource): PrefValues<P>;
+export function readPrefs(): never {
+  return notImplemented();
+}
+
+/**
+ * Pick the raw cookie values of these prefs from request cookies, for
+ * `<PrefsProvider snapshot>`. Only the prefs' own cookies are copied.
+ * @example
+ * <PrefsProvider snapshot={snapshotPrefs(prefs, request.headers.get('cookie'))}>
+ */
+export function snapshotPrefs(prefs: PrefsRecord, source: CookieSource): PrefsSnapshot;
+export function snapshotPrefs(): never {
+  return notImplemented();
+}
+
+/**
+ * Source of a blocking inline script that applies every `.reflect()` declaration to
+ * `<html>` from `document.cookie` before first paint. Returns `''` when no pref
+ * reflects. The output is fixed code plus escaped JSON config, safe to inline.
+ * @example
+ * <script nonce={nonce} dangerouslySetInnerHTML={{ __html: prefsScript(prefs) }} />
+ */
+export function prefsScript(prefs: PrefsRecord): string;
+export function prefsScript(): never {
+  return notImplemented();
+}
