@@ -1,5 +1,8 @@
-import { builder } from './builder';
+import { builder, type Def } from './builder';
+import { rawOf } from './cookie';
+import { script, type Reflection } from './reflect';
 import type { InferSchemaOutput, StandardSchemaV1 } from './standard-schema';
+import { bind, reflections } from './store';
 import type {
   CookieSource,
   EnumPrefBuilder,
@@ -41,10 +44,6 @@ export type {
   ScalarPrefBuilder,
 } from './types';
 export type { StandardSchemaV1 } from './standard-schema';
-
-const notImplemented = (): never => {
-  throw new Error('prefkit: not implemented');
-};
 
 /** Pref builders. Each returns an immutable builder to pass to `definePrefs()`. */
 export interface PrefFactory {
@@ -137,8 +136,10 @@ export const pref: PrefFactory = {
  * prefs.sidebar.set((open) => !open)
  */
 export function definePrefs<S extends PrefShape>(shape: S, options?: PrefsOptions): Prefs<S>;
-export function definePrefs(): never {
-  return notImplemented();
+export function definePrefs(shape: PrefShape, { prefix = '', ...options }: PrefsOptions = {}) {
+  const prefs: Record<string, unknown> = {};
+  for (const key in shape) prefs[key] = bind(key, shape[key] as unknown as Def, prefix, options);
+  return prefs as never;
 }
 
 /**
@@ -147,8 +148,10 @@ export function definePrefs(): never {
  * const { theme, sidebar } = readPrefs(prefs, request.headers.get('cookie'))
  */
 export function readPrefs<P extends PrefsRecord>(prefs: P, source: CookieSource): PrefValues<P>;
-export function readPrefs(): never {
-  return notImplemented();
+export function readPrefs(prefs: PrefsRecord, source: CookieSource) {
+  const values: Record<string, unknown> = {};
+  for (const key in prefs) values[key] = prefs[key]!.read(source);
+  return values as never;
 }
 
 /**
@@ -158,8 +161,17 @@ export function readPrefs(): never {
  * <PrefsProvider snapshot={snapshotPrefs(prefs, request.headers.get('cookie'))}>
  */
 export function snapshotPrefs(prefs: PrefsRecord, source: CookieSource): PrefsSnapshot;
-export function snapshotPrefs(): never {
-  return notImplemented();
+export function snapshotPrefs(prefs: PrefsRecord, source: CookieSource): PrefsSnapshot {
+  const snapshot: Record<string, string> = {};
+  for (const { name } of Object.values(prefs)) {
+    try {
+      const raw = rawOf(source, name);
+      if (typeof raw == 'string') snapshot[name] = raw;
+    } catch {
+      // malformed value: leave it out, the client reads the default
+    }
+  }
+  return snapshot;
 }
 
 /**
@@ -170,6 +182,10 @@ export function snapshotPrefs(): never {
  * <script nonce={nonce} dangerouslySetInnerHTML={{ __html: prefsScript(prefs) }} />
  */
 export function prefsScript(prefs: PrefsRecord): string;
-export function prefsScript(): never {
-  return notImplemented();
+export function prefsScript(prefs: PrefsRecord): string {
+  return script(
+    Object.values(prefs)
+      .map((handle) => reflections.get(handle))
+      .filter((r): r is Reflection => !!r),
+  );
 }
