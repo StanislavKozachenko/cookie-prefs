@@ -42,6 +42,16 @@ Run lint, typecheck, build, test, check:package and size before finishing a chan
 - Do not touch git config
 - Make atomic commits
 
-## Publishing
+## Workflow
 
-Never push, create a remote, open a PR, tag or publish to npm without the maintainer's explicit approval.
+Nothing is committed or pushed to `main` directly, however small the change. The only exception is the release workflow's version bump.
+
+1. Open an issue (see `.claude/commands/create-issue.md`)
+2. Branch from an up-to-date `main`: `feat/...`, `fix/...`, `docs/...`, `ci/...`, `chore/...`
+3. Open a pull request that closes the issue (see `.claude/commands/create-pr.md`)
+4. Wait for CI. If a check fails, read the log and fix the cause before anything else
+5. Squash-merge when `CI ok` is green and delete the branch
+
+The `main` ruleset has an admin bypass. Do not use it.
+
+Never tag or publish to npm without the maintainer's explicit approval.
