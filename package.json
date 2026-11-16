@@ -90,6 +90,24 @@
       "path": "dist/index.js",
       "limit": "2 KB",
       "gzip": true
+    },
+    {
+      "name": "prefkit/react",
+      "path": "dist/react/index.js",
+      "limit": "700 B",
+      "gzip": true,
+      "ignore": [
+        "prefkit"
+      ]
+    },
+    {
+      "name": "prefkit/next",
+      "path": "dist/next/index.js",
+      "limit": "300 B",
+      "gzip": true,
+      "ignore": [
+        "prefkit"
+      ]
     }
   ],
   "peerDependencies": {
