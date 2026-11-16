@@ -1,0 +1,22 @@
+name: Feature request
+description: Suggest an improvement
+labels: [enhancement]
+body:
+  - type: dropdown
+    id: entry
+    attributes:
+      label: Entry point
+      options:
+        - prefkit (core)
+        - prefkit/react
+        - prefkit/next
+        - prefkit/theme
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What and why
+    validations:
+      required: true
