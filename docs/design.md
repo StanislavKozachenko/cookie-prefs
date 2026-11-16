@@ -1,7 +1,7 @@
 # prefkit design
 
 Contract for the implementation. The public types in `src/index.ts`, `src/types.ts`,
-`src/react/index.ts`, `src/next/index.ts` and `src/theme/index.ts` are final;
+`src/react/index.tsx`, `src/next/index.tsx` and `src/theme/index.ts` are final;
 `src/types.test-d.ts` pins their inference and is checked by `npm run typecheck`.
 Change the API only together with this document.
 
@@ -124,17 +124,21 @@ Other decisions:
 
 ## Implementation notes
 
-- **Entry boundaries.** `prefkit/react` and `prefkit/theme` are client modules: their built files start with `'use client'` (tsup per-entry banner). `prefkit/next` is server-only: no `'use client'`, it imports `next/headers`. Server helpers must never live in a client entry, because a Server Component calling them gets a client reference.
+- **Entry boundaries.** `prefkit/react` and `prefkit/theme` are client modules: their built files start with `'use client'`, prepended to the ESM and CJS output in tsup `onSuccess` (tree shaking strips a `banner` directive, and one config avoids `clean` races between parallel builds). `prefkit/next` is server-only: no `'use client'`, it imports `next/headers`. Server helpers must never live in a client entry, because a Server Component calling them gets a client reference.
 - **No duplicated state.** Runtime imports between entries use package specifiers (`'prefkit'`, `'prefkit/react'`) marked external in tsup, not relative paths, so the cross-tab listener and stores exist once and the client boundary survives bundling. Type-only imports from `../types` are fine.
 - **Next `PrefsProvider`** is an async Server Component: in `'server'` mode it awaits `cookies()` and passes `snapshotPrefs(prefs, store)`; in both modes it passes `prefsScript(prefs)` and `nonce` to the client `PrefsProvider` from `'prefkit/react'`. `prefs` itself never crosses to the client.
 - **Snapshots must be stable** for `useSyncExternalStore`: cache the parsed value per pref by raw string, so `json` and `custom` prefs do not return a new object on every read.
 - **Own-write echo.** The CookieStore `change` event also fires for this tab's writes; compare raw values before notifying.
 - **Encoding.** Names and values are `encodeURIComponent`-encoded; booleans are `'true'`/`'false'`; enums and numbers are stored as is; `json` is `JSON.stringify` then encoded.
-- **Nonce.** Browsers hide `nonce` after load, so render it on the server only or keep `suppressHydrationWarning` on the script.
+- **Encoding at the edges.** `Pref.name` is the encoded cookie name (the key in `document.cookie`, the `Cookie` header and `PrefsSnapshot`). Snapshots and cookie stores/maps passed as `CookieSource` hold URI-decoded values; only a header string is decoded by prefkit. `toCookie().value` is not URI-encoded: frameworks encode on set, code writing a raw `Set-Cookie` header must call `encodeURIComponent`.
+- **Nonce.** Browsers hide `nonce` after load, so render it on the server only or keep `suppressHydrationWarning` on the script. The React `PrefsProvider` renders `type` and `nonce` from `typeof document` at render time (server: `text/javascript` + nonce; client: `text/plain`, no nonce) with `suppressHydrationWarning`; hydration never patches attributes, so the server element keeps its nonce.
+- **Re-applying reflection.** The client provider runs the `script` string again in a layout effect on mount (dev Strict Mode / remounts can reset `<html>`) and on `visibilitychange` to visible, so prefs nobody in this tab subscribes to follow other tabs when the tab is shown again (subscribed prefs follow at once through the store). It inserts a fresh inline `<script>` with the same text into `<head>` and removes it; inline scripts run synchronously on insertion, so the result is in place before paint. No `eval`/`new Function`: CSP checks the element like the original, by nonce (read from the server element's `nonce` property, which browsers keep after hiding the attribute, else the `nonce` prop) or by hash (same text, same hash). Under enforced Trusted Types the insertion throws and is swallowed: the pre-paint script and subscribed prefs still work, only the re-apply is skipped. No core export was needed.
+- **Nested providers** merge their snapshots (inner keys win); a provider without a snapshot keeps the outer one.
 - **Script mode trade-off.** Hooks render defaults until hydration ends; anything visible before hydration must come from reflected attributes plus CSS. Document this next to `mode`.
 - **`get()` on the server** returns the default; add a dev-only warning pointing to `read()` / `getPrefs()`.
 - **Size budget.** All of core (parsers, cookie codec, store, sync, Standard Schema glue, reflection, `prefsScript` source) must fit 2 KB gzip. If it cannot, discuss moving `prefsScript` before touching the limit.
-- **Tooling.** `tsconfig.json` has no `jsx` option yet; add `"jsx": "react-jsx"` when the first `.tsx` file lands.
+- **Tooling.** `tsconfig.json` uses `"jsx": "react-jsx"`; its `paths` and the vitest `resolve.alias` map `prefkit` and `prefkit/react` to `src/`, so typecheck and tests run from source while tsup keeps them external.
+- **Sizes.** `size-limit` checks `prefkit/react` and `prefkit/next` too, with peers and core excluded.
 
 ## Non-goals for v1
 

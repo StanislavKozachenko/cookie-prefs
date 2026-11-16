@@ -156,7 +156,8 @@ export function readPrefs(prefs: PrefsRecord, source: CookieSource) {
 
 /**
  * Pick the raw cookie values of these prefs from request cookies, for
- * `<PrefsProvider snapshot>`. Only the prefs' own cookies are copied.
+ * `<PrefsProvider snapshot>`. Only the prefs' own cookies are copied, keyed by
+ * `Pref.name`, with URI-decoded values.
  * @example
  * <PrefsProvider snapshot={snapshotPrefs(prefs, request.headers.get('cookie'))}>
  */
