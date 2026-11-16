@@ -90,6 +90,33 @@ const render = (node: ReactNode) => {
   return container;
 };
 
+/**
+ * Enforced Trusted Types, as far as scripts go: assigning script text throws. Returns
+ * the restore function.
+ */
+const blockScriptText = () => {
+  const proto = HTMLScriptElement.prototype;
+  const keys = ['text', 'textContent', 'innerHTML'] as const;
+  const own = keys.map((key) => [key, Object.getOwnPropertyDescriptor(proto, key)] as const);
+  for (const key of keys) {
+    let from: object = proto;
+    let desc: PropertyDescriptor | undefined;
+    while (!(desc = Object.getOwnPropertyDescriptor(from, key))) from = Object.getPrototypeOf(from) as object;
+    Object.defineProperty(proto, key, {
+      configurable: true,
+      get: desc.get!,
+      set() {
+        throw new TypeError(`Failed to set '${key}': this document requires 'TrustedScript' assignment.`);
+      },
+    });
+  }
+  return () => {
+    for (const [key, desc] of own)
+      if (desc) Object.defineProperty(proto, key, desc);
+      else delete (proto as unknown as Record<string, unknown>)[key];
+  };
+};
+
 describe('hydration', () => {
   it('matches the server when the cookie is set (server mode)', async () => {
     const prefs = make();
@@ -223,5 +250,53 @@ describe('reflection on <html>', () => {
     document.cookie = 'sidebar=true';
     document.dispatchEvent(new Event('visibilitychange'));
     expect(html.getAttribute('data-sidebar')).toBe('false');
+  });
+
+  describe('under enforced Trusted Types', () => {
+    let restore = () => {};
+    afterEach(() => restore());
+
+    /** Server render, run the pre-paint script, then block script text like Trusted Types. */
+    const serve = (node: ReactNode) => {
+      const container = document.createElement('div');
+      container.innerHTML = ssr(node);
+      runServerScript(container);
+      restore = blockScriptText();
+      // control: the stub really blocks script text
+      for (const key of ['text', 'textContent', 'innerHTML'] as const)
+        expect(() => (document.createElement('script')[key] = '1')).toThrow(/TrustedScript/);
+      return container.innerHTML;
+    };
+
+    it('is re-applied on mount after the attributes were wiped, without a script', async () => {
+      const prefs = make();
+      document.cookie = 'theme=dark';
+      document.cookie = 'sidebar=false';
+      const node = bare(prefs, { nonce: 'abc' });
+      const markup = serve(node);
+      wipeHtml();
+      const create = vi.spyOn(document, 'createElement');
+      const { errors, recoverable } = await hydrate(node, markup);
+      expect(html.className).toBe('dark');
+      expect(html.getAttribute('data-sidebar')).toBe('false');
+      expect(create).not.toHaveBeenCalledWith('script');
+      expect(errors).not.toHaveBeenCalled();
+      expect(recoverable).not.toHaveBeenCalled();
+    });
+
+    it('follows other tabs when the tab becomes visible again', async () => {
+      const prefs = make();
+      const node = bare(prefs);
+      await hydrate(node, serve(node));
+      expect(html.className).toBe('system');
+      expect(html.getAttribute('data-sidebar')).toBe('true');
+
+      document.cookie = 'theme=light'; // another tab, nobody here subscribes
+      document.cookie = 'sidebar=false';
+      vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
+      document.dispatchEvent(new Event('visibilitychange'));
+      expect(html.className).toBe('light');
+      expect(html.getAttribute('data-sidebar')).toBe('false');
+    });
   });
 });
