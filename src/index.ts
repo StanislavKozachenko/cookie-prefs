@@ -1,3 +1,4 @@
+import { builder } from './builder';
 import type { InferSchemaOutput, StandardSchemaV1 } from './standard-schema';
 import type {
   CookieSource,
@@ -91,12 +92,34 @@ export interface PrefFactory {
  * })
  */
 export const pref: PrefFactory = {
-  enum: notImplemented,
-  boolean: notImplemented,
-  number: notImplemented,
-  string: notImplemented,
-  json: notImplemented,
-  custom: notImplemented,
+  enum: (values) =>
+    builder({ values, p: (raw) => (values.includes(raw) ? raw : undefined), s: String }),
+  boolean: () =>
+    builder({
+      k: { true: 'true', false: 'false' },
+      p: (raw) => raw == 'true' || (raw == 'false' ? false : undefined),
+      s: String,
+    }),
+  number: () =>
+    builder({
+      k: 1,
+      p: (raw) => {
+        const n = parseFloat(raw);
+        return n === +raw && isFinite(n) ? n : undefined;
+      },
+      s: String,
+    }),
+  string: () => builder({ k: 0, p: (raw) => raw, s: String }),
+  json: (schema) =>
+    builder({
+      p: (raw) => {
+        const result = schema['~standard'].validate(JSON.parse(raw));
+        return 'then' in result || result.issues ? undefined : result.value;
+      },
+      s: JSON.stringify,
+    }),
+  custom: (codec) =>
+    builder({ p: (raw) => codec.parse(raw), s: (value) => codec.serialize(value as never) }),
 };
 
 /**
