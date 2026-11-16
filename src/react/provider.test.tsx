@@ -90,17 +90,6 @@ const render = (node: ReactNode) => {
   return container;
 };
 
-/** Every script element the provider inserts to run the reflection again. */
-const spyReruns = () => {
-  const reruns: HTMLScriptElement[] = [];
-  const append = document.head.appendChild.bind(document.head);
-  vi.spyOn(document.head, 'appendChild').mockImplementation((node) => {
-    if (node instanceof HTMLScriptElement) reruns.push(node);
-    return append(node);
-  });
-  return reruns;
-};
-
 describe('hydration', () => {
   it('matches the server when the cookie is set (server mode)', async () => {
     const prefs = make();
@@ -160,9 +149,9 @@ describe('inline script', () => {
     const prefs = make();
     expect(ssr(<PrefsProvider nonce="abc">x</PrefsProvider>)).toBe('x');
     expect(ssr(<PrefsProvider script="">x</PrefsProvider>)).toBe('x');
-    const reruns = spyReruns();
-    render(<PrefsProvider>{prefs.theme.key}</PrefsProvider>);
-    expect(reruns).toEqual([]);
+    const container = render(<PrefsProvider>{prefs.theme.key}</PrefsProvider>);
+    expect(container.querySelector('script')).toBeNull();
+    expect(html.attributes).toHaveLength(0);
   });
 
   it('is an inert data block when rendered on the client, without the script warning', () => {
@@ -234,26 +223,5 @@ describe('reflection on <html>', () => {
     document.cookie = 'sidebar=true';
     document.dispatchEvent(new Event('visibilitychange'));
     expect(html.getAttribute('data-sidebar')).toBe('false');
-  });
-
-  it('reuses the server nonce, which the client never renders', async () => {
-    const prefs = make();
-    const markup = ssr(app(prefs, { nonce: 'abc' }));
-    const reruns = spyReruns();
-    // The client may not know the per-request nonce at all.
-    await hydrate(app(prefs), markup);
-    expect(reruns.length).toBeGreaterThan(0);
-    for (const s of reruns) {
-      expect(s.getAttribute('nonce')).toBe('abc');
-      expect(s.text).toBe(prefsScript(prefs));
-      expect(s.isConnected).toBe(false);
-    }
-  });
-
-  it('uses the nonce prop for a client-only mount', () => {
-    const prefs = make();
-    const reruns = spyReruns();
-    render(app(prefs, { nonce: 'xyz' }));
-    expect(reruns.map((s) => s.getAttribute('nonce'))).toEqual(['xyz']);
   });
 });

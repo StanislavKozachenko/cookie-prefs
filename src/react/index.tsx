@@ -4,12 +4,12 @@ import {
   useEffect,
   useLayoutEffect,
   useMemo,
-  useRef,
   useSyncExternalStore,
   type ReactElement,
   type ReactNode,
 } from 'react';
 import type { Pref, PrefSetter, PrefsSnapshot } from '../types';
+import { reapply } from './reapply';
 
 export type { PrefSetter } from '../types';
 
@@ -50,14 +50,15 @@ export interface PrefsProviderProps {
    * Inline script from `prefsScript()`. Rendered once as the provider's first child, so
    * place the provider at the top of `<body>`. It runs before paint on the initial
    * document and is inert on the client, so React does not warn about it. The
-   * provider runs it again on mount (React can reset `<html>` attributes on remount)
-   * and whenever the tab becomes visible, so reflections also follow changes made in
-   * other tabs to prefs that nothing in this tab subscribes to.
+   * provider applies its reflections again with plain DOM calls, without running it,
+   * on mount (React can reset `<html>` attributes on remount) and whenever the tab
+   * becomes visible, so reflections also follow changes made in other tabs to prefs
+   * that nothing in this tab subscribes to.
    */
   script?: string | undefined;
   /**
    * CSP nonce for the inline script. Rendered on the server only, since browsers hide
-   * it after load; the provider reuses it when it runs the script again.
+   * it after load. The client never runs a script, so it does not need the nonce.
    */
   nonce?: string | undefined;
 }
@@ -80,30 +81,17 @@ export function PrefsProvider({ children, snapshot, script, nonce }: PrefsProvid
     () => (outer && snapshot ? { ...outer, ...snapshot } : (snapshot ?? outer)),
     [outer, snapshot],
   );
-  const ref = useRef<HTMLScriptElement>(null);
-
   useLayout(() => {
     if (!script) return;
-    // Run the same idempotent script again through a fresh inline <script>, which CSP
-    // checks like the original (nonce or hash), so no `eval`. The nonce comes from the
-    // server-rendered element: browsers hide the attribute but keep the `nonce` property.
-    const run = () => {
-      try {
-        const el = document.createElement('script');
-        el.setAttribute('nonce', ref.current?.nonce || nonce || '');
-        el.text = script;
-        document.head.appendChild(el).remove();
-      } catch {
-        // e.g. blocked by Trusted Types: the reflection stays as it is
-      }
-    };
+    // Nothing is executed: the config is read back from `script` and applied with DOM
+    // calls, so neither CSP nor Trusted Types is involved.
     const onVisible = () => {
-      if (document.visibilityState == 'visible') run();
+      if (document.visibilityState == 'visible') reapply(script);
     };
-    run();
+    reapply(script);
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
-  }, [script, nonce]);
+  }, [script]);
 
   // Evaluated per render: on the server there is no `document`.
   const server = typeof document == 'undefined';
@@ -111,7 +99,6 @@ export function PrefsProvider({ children, snapshot, script, nonce }: PrefsProvid
     <Snapshot.Provider value={merged}>
       {script ? (
         <script
-          ref={ref}
           // `text/plain` on the client makes the element a data block: React does not
           // warn about it, and a client-rendered copy never runs. The server copy runs
           // before paint. Both differences are expected during hydration.

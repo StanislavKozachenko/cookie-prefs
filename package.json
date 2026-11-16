@@ -94,7 +94,7 @@
     {
       "name": "prefkit/react",
       "path": "dist/react/index.js",
-      "limit": "700 B",
+      "limit": "880 B",
       "gzip": true,
       "ignore": [
         "prefkit"
