@@ -1,21 +1,21 @@
+import { cookies } from 'next/headers';
+import { prefsScript, readPrefs, snapshotPrefs } from 'prefkit';
+import { PrefsProvider as ClientPrefsProvider } from 'prefkit/react';
 import type { ReactElement, ReactNode } from 'react';
 import type { PrefsRecord, PrefValues } from '../types';
-
-const notImplemented = (): never => {
-  throw new Error('prefkit/next: not implemented');
-};
 
 /**
  * Typed values of all prefs for the current request, via `await cookies()`.
  * Server-only (Server Components, Server Functions, Route Handlers). Reading cookies
  * makes the route dynamic; with Cache Components, call it inside `<Suspense>`.
+ * Server Components are not refreshed by client writes: when output depends on a pref,
+ * call `router.refresh()` after `set()`.
  * @example
  * const { sidebar } = await getPrefs(prefs)
  * return <Shell collapsed={!sidebar} />
  */
-export function getPrefs<P extends PrefsRecord>(prefs: P): Promise<PrefValues<P>>;
-export function getPrefs(): never {
-  return notImplemented();
+export async function getPrefs<P extends PrefsRecord>(prefs: P): Promise<PrefValues<P>> {
+  return readPrefs(prefs, await cookies());
 }
 
 export interface NextPrefsProviderProps<P extends PrefsRecord> {
@@ -23,7 +23,8 @@ export interface NextPrefsProviderProps<P extends PrefsRecord> {
   prefs: P;
   /**
    * `'script'`: no `cookies()` read, the route stays static; the inline script reflects
-   * prefs on `<html>` before paint and hooks render defaults until hydration.
+   * prefs on `<html>` before paint and hooks render defaults until hydration, so
+   * anything visible before hydration must come from reflected attributes plus CSS.
    * `'server'`: reads `cookies()` so hooks render exact values during SSR; makes the
    * route dynamic (with Cache Components, the layout needs `export const instant = false`).
    * @default 'script'
@@ -45,9 +46,17 @@ export interface NextPrefsProviderProps<P extends PrefsRecord> {
  *   </body>
  * </html>
  */
-export function PrefsProvider<P extends PrefsRecord>(
-  props: NextPrefsProviderProps<P>,
-): Promise<ReactElement>;
-export function PrefsProvider(): never {
-  return notImplemented();
+export async function PrefsProvider<P extends PrefsRecord>({
+  prefs,
+  mode = 'script',
+  nonce,
+  children,
+}: NextPrefsProviderProps<P>): Promise<ReactElement> {
+  // Script mode must not touch `cookies()`, or the whole route becomes dynamic.
+  const snapshot = mode == 'server' ? snapshotPrefs(prefs, await cookies()) : undefined;
+  return (
+    <ClientPrefsProvider snapshot={snapshot} script={prefsScript(prefs)} nonce={nonce}>
+      {children}
+    </ClientPrefsProvider>
+  );
 }
