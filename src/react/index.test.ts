@@ -1,6 +1,6 @@
-import * as entry from './index';
 import { expect, it } from 'vitest';
+import * as entry from './index';
 
-it('loads the react entry', () => {
-  expect(entry).toBeDefined();
+it('exports the react api', () => {
+  expect(Object.keys(entry).sort()).toEqual(['PrefsProvider', 'usePref']);
 });
