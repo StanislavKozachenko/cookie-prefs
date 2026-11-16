@@ -2,7 +2,7 @@ import { builder, type Def } from './builder';
 import { rawOf } from './cookie';
 import { script, type Reflection } from './reflect';
 import type { InferSchemaOutput, StandardSchemaV1 } from './standard-schema';
-import { bind, reflections } from './store';
+import { bind, REFLECTION } from './store';
 import type {
   CookieSource,
   EnumPrefBuilder,
@@ -186,7 +186,7 @@ export function prefsScript(prefs: PrefsRecord): string;
 export function prefsScript(prefs: PrefsRecord): string {
   return script(
     Object.values(prefs)
-      .map((handle) => reflections.get(handle))
+      .map((handle) => (handle as { [REFLECTION]?: Reflection })[REFLECTION])
       .filter((r): r is Reflection => !!r),
   );
 }
