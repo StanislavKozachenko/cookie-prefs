@@ -1,0 +1,153 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: 'Version bump type'
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+jobs:
+  release:
+    name: Bump version & publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.RELEASE_TOKEN }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          registry-url: 'https://registry.npmjs.org'
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm test
+      - run: npm run check:package
+      - run: npm run size
+
+      - name: Bump version
+        run: npm version ${{ github.event.inputs.bump }} --no-git-tag-version
+
+      - name: Get new version
+        id: version
+        run: echo "value=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+
+      - name: Update CHANGELOG
+        run: |
+          VERSION="${{ steps.version.outputs.value }}"
+          DATE=$(date +%Y-%m-%d)
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+
+          # $2 = "!" selects only breaking commits (feat!: ...), "" only non-breaking ones
+          get_section() {
+            local prefix=$1 bang=$2
+            if [ -n "$LAST_TAG" ]; then
+              git log "${LAST_TAG}..HEAD" --pretty=format:"%s" \
+                | grep -E "^(${prefix})(\([^)]+\))?${bang}:" \
+                | sed -E "s/^[a-z]+(\([^)]+\))?!?: /- /" || true
+            fi
+          }
+
+          BREAKING=$(get_section "feat|fix|refactor|perf|docs|ci" "!")
+          ADDED=$(get_section "feat" "")
+          FIXED=$(get_section "fix" "")
+          CHANGED=$(get_section "refactor|perf|docs|ci" "")
+
+          if [ -z "$BREAKING" ] && [ -z "$ADDED" ] && [ -z "$FIXED" ] && [ -z "$CHANGED" ]; then
+            echo "::error::No releasable commits (feat/fix/refactor/perf/docs/ci) found since ${LAST_TAG:-the beginning}. CHANGELOG would be empty. Add conventional commits before releasing."
+            exit 1
+          fi
+
+          {
+            echo "## [${VERSION}] - ${DATE}"
+            echo ""
+            if [ -n "$BREAKING" ]; then
+              echo "### Breaking"
+              echo ""
+              echo "$BREAKING"
+              echo ""
+            fi
+            if [ -n "$ADDED" ]; then
+              echo "### Added"
+              echo ""
+              echo "$ADDED"
+              echo ""
+            fi
+            if [ -n "$FIXED" ]; then
+              echo "### Fixed"
+              echo ""
+              echo "$FIXED"
+              echo ""
+            fi
+            if [ -n "$CHANGED" ]; then
+              echo "### Changed"
+              echo ""
+              echo "$CHANGED"
+              echo ""
+            fi
+            echo "---"
+            echo ""
+          } > /tmp/changelog-entry.md
+
+          python3 - <<'PYEOF'
+          with open('CHANGELOG.md', 'r') as f:
+              content = f.read()
+          with open('/tmp/changelog-entry.md', 'r') as f:
+              entry = f.read()
+          idx = content.index('---\n') + 4
+          content = content[:idx] + '\n' + entry + content[idx:]
+          with open('CHANGELOG.md', 'w') as f:
+              f.write(content)
+          PYEOF
+
+      # The commit is made through the API rather than pushed, so GitHub signs
+      # it (Verified) like the squash merges; expectedHeadOid refuses to commit
+      # over a main that moved during the run.
+      - name: Commit version bump to main
+        id: commit
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          VERSION: ${{ steps.version.outputs.value }}
+          REPO: ${{ github.repository }}
+        run: |
+          node -e '
+            const { readFileSync, writeFileSync } = require("fs")
+            const { execFileSync } = require("child_process")
+            const { VERSION, REPO } = process.env
+            const files = ["package.json", "package-lock.json", "CHANGELOG.md"]
+            const query = `mutation($input: CreateCommitOnBranchInput!) { createCommitOnBranch(input: $input) { commit { oid } } }`
+            const input = {
+              branch: { repositoryNameWithOwner: REPO, branchName: "main" },
+              message: { headline: `chore: bump version to ${VERSION}` },
+              expectedHeadOid: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
+              fileChanges: { additions: files.map(path => ({ path, contents: readFileSync(path).toString("base64") })) },
+            }
+            writeFileSync("commit.json", JSON.stringify({ query, variables: { input } }))
+          '
+          oid=$(gh api graphql --input commit.json --jq '.data.createCommitOnBranch.commit.oid')
+          rm commit.json
+          echo "Committed $oid"
+          echo "oid=$oid" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub release
+        run: gh release create "v${{ steps.version.outputs.value }}" --target "${{ steps.commit.outputs.oid }}" --title "v${{ steps.version.outputs.value }}" --generate-notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to npm
+        run: npm publish --provenance

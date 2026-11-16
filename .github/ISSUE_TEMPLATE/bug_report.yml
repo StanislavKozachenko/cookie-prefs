@@ -1,0 +1,33 @@
+name: Bug report
+description: Something does not work as documented
+labels: [bug]
+body:
+  - type: dropdown
+    id: entry
+    attributes:
+      label: Entry point
+      options:
+        - prefkit (core)
+        - prefkit/react
+        - prefkit/next
+        - prefkit/theme
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: prefkit version
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: React, Next.js and Node.js versions
+      placeholder: react 19.1, next 15.3, node 22
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, what happened instead. A minimal reproduction helps most.
+    validations:
+      required: true
