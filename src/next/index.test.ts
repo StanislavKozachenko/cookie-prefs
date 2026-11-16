@@ -1,6 +1,6 @@
-import * as entry from './index';
 import { expect, it } from 'vitest';
+import * as entry from './index';
 
-it('loads the next entry', () => {
-  expect(entry).toBeDefined();
+it('exports the next api', () => {
+  expect(Object.keys(entry).sort()).toEqual(['PrefsProvider', 'getPrefs']);
 });
