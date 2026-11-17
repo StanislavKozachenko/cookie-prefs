@@ -10,6 +10,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ---
 
+## [0.1.2] - 2026-11-17
+
+### Fixed
+
+- survive throwing and re-entrant listeners, isolate server reads and align the cookie readers (#68)
+- refresh a cookie only when it holds the value; keep __proto__ themes in the script (#67)
+
+### Changed
+
+- type-check the e2e specs (#66)
+- win back size headroom in every entry (#62)
+- run the e2e suite against next 14, 15 and 16 (#58)
+
+---
+
 ## [0.1.1] - 2026-11-17
 
 ### Changed
