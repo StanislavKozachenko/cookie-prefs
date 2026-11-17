@@ -51,6 +51,6 @@ export function DensityToggle() {
 
 ## Nonce
 
-Pass a CSP nonce with `<PrefsProvider prefs={prefs} nonce={nonce}>`, for example from `(await headers()).get('x-nonce')`. See also [security and platform notes](security.md).
+Pass a CSP nonce with `<PrefsProvider prefs={prefs} nonce={nonce}>`, for example from `(await headers()).get('x-nonce') ?? undefined` (`get()` returns `string | null`, the prop takes `string | undefined`). See also [security and platform notes](security.md).
 
 Outside Next.js, see [Core and React guide](core.md).
