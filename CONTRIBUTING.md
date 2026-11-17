@@ -4,6 +4,10 @@
 
 Open an issue with the entry point (`prefkit`, `prefkit/react`, `prefkit/next` or `prefkit/theme`), the versions of prefkit, React, Next.js and Node.js, and a minimal reproduction.
 
+## Development setup
+
+Development needs Node.js 22 or newer (`.nvmrc` pins 22, so `nvm use` picks it); CI tests on Node.js 22 and 24. This is a toolchain requirement only: the published package declares no `engines`, so apps can install it on any Node.js version their Next.js and React support. Run `npm ci` to install.
+
 ## Submitting changes
 
 Nothing is pushed to `main` directly.

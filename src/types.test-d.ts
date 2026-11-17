@@ -13,7 +13,11 @@ import {
   type PrefValue,
   type PrefValues,
 } from './index';
-import { getPrefs, PrefsProvider as NextPrefsProvider } from './next/index';
+import {
+  getPrefs,
+  PrefsProvider as NextPrefsProvider,
+  type NextPrefsProviderProps,
+} from './next/index';
 import { PrefsProvider, usePref, type PrefSetter } from './react/index';
 import { ThemeProvider, useTheme, type ThemeProviderProps, type UseThemeProps } from './theme/index';
 
@@ -42,6 +46,36 @@ expectTypeOf(prefs.since.get()).toEqualTypeOf<Date | undefined>();
 // Standard Schema inference.
 expectTypeOf(prefs.columns.get()).toEqualTypeOf<string[]>();
 expectTypeOf(prefs.filters.get()).toEqualTypeOf<{ q: string; page: number } | undefined>();
+expectTypeOf(prefs.columns).toEqualTypeOf<Pref<string[], string[]>>();
+expectTypeOf(prefs.filters).toEqualTypeOf<
+  Pref<{ q: string; page: number }, { q: string; page: number } | undefined>
+>();
+prefs.columns.set((columns) => [...columns, 'name']);
+
+// `pref.json` stores `JSON.stringify(value)` and validates it on read, so writes take the
+// schema's input; reads, the updater's `prev` and `.default()` (returned as is) its output.
+const csv = z.string().transform((s) => s.split(','));
+const json = definePrefs({
+  tags: pref.json(csv).default([]),
+  maybeTags: pref.json(csv),
+  note: pref.json(z.string().optional()),
+});
+expectTypeOf(json.tags).toEqualTypeOf<Pref<string, string[]>>();
+expectTypeOf(json.maybeTags).toEqualTypeOf<Pref<string, string[] | undefined>>();
+expectTypeOf(json.tags.get()).toEqualTypeOf<string[]>();
+json.tags.set('a,b');
+json.tags.set((tags) => [...tags, 'c'].join(','));
+json.maybeTags.set((tags) => (tags ?? []).join(','));
+expectTypeOf(json.tags.toCookie).parameter(0).toEqualTypeOf<string>();
+expectTypeOf(usePref(json.tags)[1]).toEqualTypeOf<PrefSetter<string, string[]>>();
+// @ts-expect-error the output is not valid schema input: it would read back as the default
+json.tags.set(['a', 'b']);
+// @ts-expect-error the updater must return schema input
+json.tags.set((tags) => tags);
+// @ts-expect-error the default is returned as is, so it is an output value
+pref.json(csv).default('a,b');
+// @ts-expect-error clear with reset(), not undefined
+json.note.set(undefined);
 
 // Handles are fully typed `Pref<T, V>`.
 expectTypeOf(prefs.theme).toEqualTypeOf<
@@ -99,6 +133,11 @@ expectTypeOf(NextPrefsProvider<typeof prefs>)
   .parameter(0)
   .toHaveProperty('mode')
   .toEqualTypeOf<'script' | 'server' | undefined>();
+// Optional props take an explicit `undefined` under `exactOptionalPropertyTypes`.
+declare const maybeNonce: string | undefined;
+declare const maybeMode: 'script' | 'server' | undefined;
+const nextProps: NextPrefsProviderProps<typeof prefs> = { prefs, mode: maybeMode, nonce: maybeNonce };
+void NextPrefsProvider(nextProps);
 
 // Theme preset: next-themes compatible.
 expectTypeOf(useTheme()).toEqualTypeOf<UseThemeProps>();

@@ -35,6 +35,11 @@ export interface StandardSchemaV1Types<Input = unknown, Output = Input> {
   readonly output: Output;
 }
 
+/** Input type of a Standard Schema. */
+export type InferSchemaInput<S extends StandardSchemaV1> = NonNullable<
+  S['~standard']['types']
+>['input'];
+
 /** Output type of a Standard Schema. */
 export type InferSchemaOutput<S extends StandardSchemaV1> = NonNullable<
   S['~standard']['types']
