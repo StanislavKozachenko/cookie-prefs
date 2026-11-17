@@ -52,15 +52,15 @@ jobs:
           VERSION="${{ steps.version.outputs.value }}"
           DATE=$(date +%Y-%m-%d)
           LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          # No tag yet (first release): use the whole history
+          RANGE="${LAST_TAG:+${LAST_TAG}..}HEAD"
 
           # $2 = "!" selects only breaking commits (feat!: ...), "" only non-breaking ones
           get_section() {
             local prefix=$1 bang=$2
-            if [ -n "$LAST_TAG" ]; then
-              git log "${LAST_TAG}..HEAD" --pretty=format:"%s" \
-                | grep -E "^(${prefix})(\([^)]+\))?${bang}:" \
-                | sed -E "s/^[a-z]+(\([^)]+\))?!?: /- /" || true
-            fi
+            git log $RANGE --pretty=format:"%s" \
+              | grep -E "^(${prefix})(\([^)]+\))?${bang}:" \
+              | sed -E "s/^[a-z]+(\([^)]+\))?!?: /- /" || true
           }
 
           BREAKING=$(get_section "feat|fix|refactor|perf|docs|ci" "!")
@@ -115,6 +115,19 @@ jobs:
               f.write(content)
           PYEOF
 
+      # Irreversible public steps come last, publishing first: if it fails,
+      # nothing public changed. On a re-run after a later step failed, the
+      # version is already on npm and publishing is skipped.
+      - name: Publish to npm
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          if [ -n "$(npm view "prefkit@${VERSION}" version 2>/dev/null)" ]; then
+            echo "prefkit@${VERSION} is already on npm, skipping publish"
+          else
+            npm publish --provenance
+          fi
+
       # The commit is made through the API rather than pushed, so GitHub signs
       # it (Verified) like the squash merges; expectedHeadOid refuses to commit
       # over a main that moved during the run.
@@ -144,10 +157,15 @@ jobs:
           echo "Committed $oid"
           echo "oid=$oid" >> "$GITHUB_OUTPUT"
 
+      - name: Create tag
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          VERSION: ${{ steps.version.outputs.value }}
+          REPO: ${{ github.repository }}
+          OID: ${{ steps.commit.outputs.oid }}
+        run: gh api "repos/${REPO}/git/refs" -f ref="refs/tags/v${VERSION}" -f sha="$OID"
+
       - name: Create GitHub release
-        run: gh release create "v${{ steps.version.outputs.value }}" --target "${{ steps.commit.outputs.oid }}" --title "v${{ steps.version.outputs.value }}" --generate-notes
+        run: gh release create "v${{ steps.version.outputs.value }}" --verify-tag --title "v${{ steps.version.outputs.value }}" --generate-notes
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Publish to npm
-        run: npm publish --provenance
