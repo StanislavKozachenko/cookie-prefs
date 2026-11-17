@@ -8,7 +8,11 @@ import {
   readPrefs,
   snapshotPrefs,
   type CookieInit,
+  type CookieOptions,
+  type CookieSameSite,
   type Pref,
+  type PrefOptions,
+  type PrefsOptions,
   type PrefsSnapshot,
   type PrefValue,
   type PrefValues,
@@ -115,6 +119,29 @@ declare const nextCookies: Awaited<ReturnType<typeof cookies>>;
 readPrefs(prefs, nextCookies);
 nextCookies.set(prefs.locale.toCookie('de'));
 expectTypeOf(prefs.locale.toCookie('de')).toEqualTypeOf<CookieInit>();
+
+// Cookie options take an explicit `undefined` ("not set") under `exactOptionalPropertyTypes`,
+// so optional values pass through without conditional spreads.
+declare const maybeString: string | undefined;
+declare const maybeNumber: number | undefined;
+declare const maybeSameSite: CookieSameSite | undefined;
+declare const maybeBoolean: boolean | undefined;
+const cookieOptions: CookieOptions = {
+  path: maybeString,
+  domain: maybeString,
+  maxAge: maybeNumber,
+  sameSite: maybeSameSite,
+  secure: maybeBoolean,
+  partitioned: maybeBoolean,
+};
+const prefsOptions: PrefsOptions = { ...cookieOptions, prefix: maybeString };
+const prefOptions: PrefOptions = { ...cookieOptions, name: maybeString };
+definePrefs({ a: pref.string().options(prefOptions), b: pref.number().options({ domain: maybeString }) }, prefsOptions);
+definePrefs({}, { domain: maybeString, prefix: undefined });
+// `toCookie()` never returns `undefined` attributes, so `CookieInit` stays exact.
+// @ts-expect-error `CookieInit` optional fields are never `undefined`
+const exactInit: CookieInit = { name: 'a', value: '', path: '/', maxAge: 1, sameSite: 'lax', domain: maybeString };
+void exactInit;
 
 // React hook: useState-like tuple.
 const [theme, setTheme] = usePref(prefs.theme);

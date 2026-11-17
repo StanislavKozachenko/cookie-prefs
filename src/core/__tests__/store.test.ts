@@ -191,6 +191,53 @@ describe('browser cookie attributes', () => {
       'x=; Path=/app; Domain=example.test; Max-Age=0; SameSite=strict; Secure; Partitioned',
     ]);
   });
+
+  describe('undefined options mean "not set"', () => {
+    const none = {
+      path: undefined,
+      domain: undefined,
+      maxAge: undefined,
+      sameSite: undefined,
+      secure: undefined,
+      partitioned: undefined,
+    };
+
+    it('in definePrefs options, which keep the defaults', () => {
+      const writes = spyCookieWrites();
+      const { a } = definePrefs({ a: pref.string() }, { ...none, prefix: undefined });
+      a.set('x');
+      a.reset();
+      expect(writes).toEqual([
+        'a=x; Path=/; Max-Age=34560000; SameSite=lax',
+        'a=; Path=/; Max-Age=0; SameSite=lax',
+      ]);
+    });
+
+    it('in pref options, which keep the defaults', () => {
+      const writes = spyCookieWrites();
+      vi.stubGlobal('location', { protocol: 'https:' });
+      const { a } = definePrefs({ a: pref.string().options({ ...none, name: undefined }) });
+      a.set('x');
+      expect(writes).toEqual(['a=x; Path=/; Max-Age=34560000; SameSite=lax; Secure']);
+    });
+
+    it('in pref options, which keep the definePrefs and earlier pref options', () => {
+      const writes = spyCookieWrites();
+      const { a, b } = definePrefs(
+        {
+          a: pref.string().options(none),
+          b: pref.string().options({ name: 'bee', maxAge: 60, path: '/b' }).options({ ...none, name: undefined }),
+        },
+        { path: '/app', domain: 'x.test', maxAge: 120, sameSite: 'strict', secure: true, partitioned: true },
+      );
+      a.set('1');
+      b.set('2');
+      expect(writes).toEqual([
+        'a=1; Path=/app; Domain=x.test; Max-Age=120; SameSite=strict; Secure; Partitioned',
+        'bee=2; Path=/b; Domain=x.test; Max-Age=60; SameSite=strict; Secure; Partitioned',
+      ]);
+    });
+  });
 });
 
 describe('subscribe', () => {
