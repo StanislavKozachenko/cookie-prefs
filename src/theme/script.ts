@@ -27,14 +27,14 @@ export const MEDIA = '(prefers-color-scheme: dark)';
  * test in `src/theme/__tests__/script.test.tsx`).
  */
 const SOURCE =
-  '(function(k,l,a,m,d,f,s,c){var h=document.documentElement,o={}.hasOwnProperty,x,i,j;' +
+  '(function(k,l,a,m,d,f,s,c){var h=document.documentElement,x,i,j;' +
   "if(!f){x=('; '+document.cookie).split('; '+k+'=')[1];" +
   "try{x=x!=null?decodeURIComponent(x.split(';')[0].replace(/^\"(.*)\"$/,'$1')):localStorage.getItem(l)}catch(e){x=null}" +
-  'f=x!=null&&o.call(m,x)?x:d}' +
+  'f=x!=null&&{}.hasOwnProperty.call(m,x)?x:d}' +
   "if(f=='system'&&s)f=matchMedia('" +
   MEDIA +
   "').matches?'dark':'light';" +
-  'x=o.call(m,f)?m[f]:f;' +
+  'x={}.hasOwnProperty.call(m,f)?m[f]:f;' +
   "for(i=0;i<a.length;i++)try{if(a[i]=='class'){for(j in m)h.classList.remove(m[j]);h.classList.add(x)}" +
   'else h.setAttribute(a[i],x)}catch(e){}' +
   'if(c!=null)h.style.colorScheme=/^(light|dark)$/.test(f)?f:c})';
