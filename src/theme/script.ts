@@ -94,7 +94,7 @@ export const paint = ([, , attributes, dom, , forced, enableSystem, colorScheme]
 export const pauseTransitions = (nonce: string | undefined) => {
   const css = document.createElement('style');
   if (nonce) css.setAttribute('nonce', nonce);
-  css.appendChild(document.createTextNode('*,*::before,*::after{transition:none!important}'));
+  css.textContent = '*,*::before,*::after{transition:none!important}';
   document.head.appendChild(css);
   return () => {
     // Read a computed value to force a restyle with transitions off, then re-enable.
