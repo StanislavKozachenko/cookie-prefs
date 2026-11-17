@@ -57,6 +57,10 @@ export interface CookieInit {
    */
   value: string;
   path: string;
+  /**
+   * Lifetime in seconds, like the `Max-Age` attribute and Next.js `cookies().set()`.
+   * Express `res.cookie` takes milliseconds: pass `maxAge * 1000` there.
+   */
   maxAge: number;
   sameSite: CookieSameSite;
   domain?: string;
