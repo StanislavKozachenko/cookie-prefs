@@ -580,6 +580,19 @@ describe('refresh against Safari’s 7-day cap on script-written cookies', () =>
     expect(recoverable).not.toHaveBeenCalled();
   });
 
+  it('re-writes only a cookie that lives longer than 7 days', () => {
+    for (const name of ['r5', 'r6', 'r7']) document.cookie = name + '=dark';
+    const write = writes();
+    render(app({ storageKey: 'r5', cookie: { maxAge: 86400 } }));
+    act(() => root!.unmount());
+    render(app({ storageKey: 'r6', cookie: { maxAge: 604800 } }));
+    act(() => root!.unmount());
+    expect(write).not.toHaveBeenCalled();
+    render(app({ storageKey: 'r7', cookie: { maxAge: 604801 } }));
+    expect(write.mock.calls).toEqual([['r7=dark; Path=/; Max-Age=604801; SameSite=lax']]);
+    expect(current.theme).toBe('dark');
+  });
+
   it('never creates a missing cookie', () => {
     const write = writes();
     render(app({ storageKey: 'r3' }));
