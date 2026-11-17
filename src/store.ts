@@ -22,6 +22,15 @@ export const bind = (key: string, def: Def, prefix: string, options: CookieOptio
   const kind = def.values
     ? Object.fromEntries(def.values.map((v) => [v, def.m?.[v] ?? v]))
     : def.k;
+  // Dev only (dropped from production builds): `classList` rejects an empty token or one
+  // with whitespace, so such a class would never be applied, by the client or the script.
+  if (
+    typeof process == 'object' &&
+    process.env.NODE_ENV != 'production' &&
+    targets?.includes('class') &&
+    Object.values({ ...(kind as object) }).some((c) => !/^[^\t\n\f\r ]+$/.test(c as string))
+  )
+    throw TypeError(`prefkit: ${key}.reflect('class') needs non-empty classes without whitespace`);
   // Parsed value per raw string, so reads are referentially stable. Bounded, since
   // on the server raw strings come from arbitrary requests.
   const cache = new Map<string, unknown>();

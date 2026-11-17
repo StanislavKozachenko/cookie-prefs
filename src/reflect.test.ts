@@ -17,6 +17,7 @@ const resetHtml = () => {
 afterEach(() => {
   clearCookies();
   resetHtml();
+  vi.unstubAllEnvs();
 });
 
 /** Run the generated script the way a browser runs an inline script. */
@@ -182,6 +183,7 @@ describe('prefsScript', () => {
   });
 
   it('never throws, and one bad pref does not stop the others', () => {
+    vi.stubEnv('NODE_ENV', 'production'); // the dev-only class check would throw first
     const prefs = definePrefs({
       bad: pref.enum(['a b', 'c']).default('a b').reflect('class'),
       good: pref.boolean().default(true).reflect('data-good'),

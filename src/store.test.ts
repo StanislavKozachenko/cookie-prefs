@@ -30,6 +30,7 @@ afterEach(() => {
   html.className = '';
   for (const { name } of [...html.attributes]) html.removeAttribute(name);
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
 });
 
 const make = () =>
@@ -355,9 +356,15 @@ describe('reflection after changes', () => {
     });
   });
 
-  it('never throws on a value that is not a valid class', () => {
-    const { t } = definePrefs({ t: pref.enum(['a b', 'c']).reflect('class') });
+  it('never throws on a value that is not a valid class (production)', () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    const { t, u } = definePrefs({
+      t: pref.enum(['a b', 'c']).reflect('class'),
+      u: pref.enum(['a', 'b']).default('b').reflect('class', { a: '' }),
+    });
     expect(() => t.set('a b')).not.toThrow();
     expect(t.get()).toBe('a b');
+    expect(() => u.set('a')).not.toThrow();
+    expect(u.get()).toBe('a');
   });
 });

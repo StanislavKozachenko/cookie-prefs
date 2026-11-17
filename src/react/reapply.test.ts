@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as z from 'zod';
 import { definePrefs, pref, prefsScript, type PrefsRecord } from '../index';
 import { reapply } from './reapply';
@@ -28,6 +28,16 @@ const state = () => ({
 
 /** Run the inline script the way a browser runs it. */
 const runScript = (prefs: PrefsRecord) => new Function(prefsScript(prefs))();
+
+/** Define prefs as in production, where the dev-only check of class names is dropped. */
+const production = (define: () => PrefsRecord) => () => {
+  vi.stubEnv('NODE_ENV', 'production');
+  try {
+    return define();
+  } finally {
+    vi.unstubAllEnvs();
+  }
+};
 
 const hostile = '</script>"})([\' &;=';
 
@@ -63,7 +73,7 @@ const configs: Record<string, () => PrefsRecord> = {
       },
       { prefix: 'p é/' },
     ),
-  'hostile strings': () =>
+  'hostile strings': production(() =>
     definePrefs({
       x: pref
         .enum([hostile, 'b', '__proto__'])
@@ -71,6 +81,7 @@ const configs: Record<string, () => PrefsRecord> = {
         .reflect(['class', 'data-x', '--x'], { b: '<!-- &   -->', ['__proto__']: 'proto' }),
       y: pref.string().default(hostile).reflect(['data-y', '--y']),
     }),
+  ),
   // Unmasked: no hostile class aborts the pref before `__proto__` is looked up.
   '__proto__ enum values': () =>
     definePrefs({
@@ -80,13 +91,14 @@ const configs: Record<string, () => PrefsRecord> = {
         .default('__proto__')
         .reflect(['data-q', 'class'], { ['__proto__']: 'proto' }),
     }),
-  'one bad pref': () =>
+  'one bad pref': production(() =>
     definePrefs({
       bad: pref.enum(['a b', 'c']).default('a b').reflect(['data-bad-before', 'class', 'data-bad-after']),
       good: pref.boolean().default(true).reflect('data-good'),
       bad2: pref.enum(['ok', 'x y']).reflect(['class', 'data-bad2']),
       last: pref.number().default(1).reflect('--last'),
     }),
+  ),
 };
 
 /** Cookie states, as raw `document.cookie` writes of encoded names. */
