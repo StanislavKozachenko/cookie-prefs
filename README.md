@@ -120,7 +120,7 @@ Props and hook fields keep their next-themes names and defaults; the choice live
 
 ## Security and platform notes
 
-Prefs are readable by every script on the page: never store secrets. The pre-paint script needs a CSP nonce under strict policies, and Safari caps script-written cookies at 7 days (prefkit refreshes them). Details, Trusted Types, iframes and non-goals are in [Security and platform notes](docs/security.md).
+Prefs are readable by every script on the page: never store secrets. The pre-paint script needs a CSP nonce under strict policies, and Safari caps script-written cookies at 7 days (prefkit refreshes the long-lived ones once per page load). Details, Trusted Types, iframes and non-goals are in [Security and platform notes](docs/security.md).
 
 ## Compatibility
 
