@@ -18,8 +18,10 @@ export type Config = [
 export const MEDIA = '(prefers-color-scheme: dark)';
 
 /**
- * Fixed ES5 source of the pre-paint script, ending in `.apply(0,`: the `Config` items
- * follow as arguments. Reads the cookie (or, when it is absent, a next-themes value in
+ * Fixed ES5 source of the pre-paint script, ending in `.apply(0,JSON.parse(`: the
+ * `Config` follows as a JSON string literal and becomes the arguments. As an object
+ * literal, a theme or `value` key named `__proto__` would set the prototype instead of
+ * adding a key. Reads the cookie (or, when it is absent, a next-themes value in
  * `localStorage`), validates it, falls back to the default, resolves `'system'`,
  * then writes the class / attributes and `color-scheme` on `<html>`. Never built from
  * `Function.prototype.toString`, so minifiers and `keepNames` cannot break it
@@ -37,20 +39,20 @@ const SOURCE =
   'x={}.hasOwnProperty.call(m,f)?m[f]:f;' +
   "for(i=0;i<a.length;i++)try{if(a[i]=='class'){for(j in m)h.classList.remove(m[j]);h.classList.add(x)}" +
   'else h.setAttribute(a[i],x)}catch(e){}' +
-  'if(c!=null)h.style.colorScheme=/^(light|dark)$/.test(f)?f:c}).apply(0,';
+  'if(c!=null)h.style.colorScheme=/^(light|dark)$/.test(f)?f:c}).apply(0,JSON.parse(';
 
 /**
- * The inline script for a config: fixed code plus the config as JSON, with `<`, `>`,
- * `&`, U+2028 and U+2029 escaped so it is safe inside `<script>` (local copy of the
- * core helper, which is internal).
+ * The inline script for a config: fixed code plus the config as JSON in a JSON string
+ * literal (valid ES5 once U+2028/U+2029 are escaped), with `<`, `>` and `&` escaped so
+ * it is safe inside `<script>` (local copy of the core helper, which is internal).
  */
 export const themeScript = (config: Config): string =>
   SOURCE +
-  JSON.stringify(config).replace(
+  JSON.stringify(JSON.stringify(config)).replace(
     /[<>&\u2028\u2029]/g,
     (c) => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'),
   ) +
-  ')';
+  '))';
 
 /** The `prefers-color-scheme` query; `undefined` where `matchMedia` is missing (jsdom). */
 export const media = () => globalThis.matchMedia?.(MEDIA);

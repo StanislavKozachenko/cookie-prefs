@@ -32,10 +32,12 @@ const seen = new WeakSet<object>();
  * per page load the hook re-writes the pref's cookie when it already exists, with the
  * same value: the 7 days then count from the last visit, not the last change. Only a
  * pref whose `maxAge` is longer than 7 days is refreshed, so a short-lived one still
- * expires on time. A pref no hook uses is refreshed only by `set()`. A cookie set by
- * the server (`Set-Cookie`, e.g. middleware writing `pref.toCookie(value)`) is not
- * capped, but this refresh re-writes it from the page, so that only helps a pref no
- * hook reads.
+ * expires on time. Only a cookie that holds a valid value exactly as `set()` writes
+ * it is refreshed: an invalid or unknown value (another subdomain's, a newer
+ * release's) is left alone until `set()`. A pref no hook uses is refreshed only by
+ * `set()`. A cookie set by the server (`Set-Cookie`, e.g. middleware writing
+ * `pref.toCookie(value)`) is not capped, but this refresh re-writes it from the page,
+ * so that only helps a pref no hook reads.
  * @example
  * const [sidebar, setSidebar] = usePref(prefs.sidebar)
  * <button onClick={() => setSidebar((open) => !open)}>Toggle</button>
@@ -52,14 +54,16 @@ export function usePref<T, V>(pref: Pref<T, V>): [value: V, setValue: PrefSetter
     seen.add(pref);
     try {
       const current = pref.get() as unknown as T;
-      // Only an existing cookie meant to outlive the cap (a shorter one would never
-      // expire for a regular visitor), and only when writing it back yields the very
-      // same value (same object for json and custom prefs), so the store notifies nobody.
+      // Only a cookie meant to outlive the cap (a shorter one would never expire for a
+      // regular visitor), and only when it holds the very text the write produces: an
+      // invalid or unknown value (another subdomain's, a newer release's) reads as the
+      // default and must not be overwritten. The same text parses to the same cached
+      // value, so the store notifies nobody.
       if (
         current !== undefined &&
         pref.toCookie(current).maxAge > 604800 &&
-        ('; ' + document.cookie).split('; ' + pref.name + '=')[1] != null &&
-        pref.read({ [pref.name]: pref.toCookie(current).value }) === (current as unknown)
+        ('; ' + document.cookie).split('; ' + pref.name + '=')[1]?.split(';')[0] ===
+          encodeURIComponent(pref.toCookie(current).value)
       )
         pref.set(() => current);
     } catch {

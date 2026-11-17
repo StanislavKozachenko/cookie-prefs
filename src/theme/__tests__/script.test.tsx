@@ -98,6 +98,29 @@ const rows: Record<string, Row> = {
   'malformed cookie reads as default': { cookie: 'theme=%E0%A4%A', props: { defaultTheme: 'dark' }, expected: { colorScheme: 'dark' } },
   'quoted cookie': { cookie: 'theme="dark"', expected: { colorScheme: 'dark' } },
   'prototype keys are not themes': { cookie: 'theme=__proto__', props: { defaultTheme: 'dark' }, expected: { colorScheme: 'dark' } },
+  // A JSON object literal with an own `__proto__` key sets the prototype: the script
+  // must parse its config, like the client gets it.
+  ...Object.fromEntries(
+    ['__proto__', 'constructor', 'toString'].flatMap((name): [string, Row][] => [
+      [
+        `theme named ${name}`,
+        {
+          props: { themes: [name, 'dark'], defaultTheme: 'dark', enableSystem: false },
+          cookie: 'theme=' + name,
+          expected: { attrs: { 'data-theme': name, style: 'color-scheme: dark;' } },
+        },
+      ],
+      [
+        `value key named ${name}`,
+        {
+          // from JSON, as a literal `{ __proto__: … }` would set the prototype here too
+          props: { value: JSON.parse(`{"${name}":"own","dark":"d"}`) as Record<string, string>, attribute: 'class' },
+          cookie: 'theme=' + name,
+          expected: { className: 'own', colorScheme: '' },
+        },
+      ],
+    ]),
+  ),
   'class, enableSystem off, light default': {
     props: { attribute: 'class', enableSystem: false },
     cookie: 'theme=system',
@@ -210,9 +233,9 @@ describe('script source', () => {
 
   it('is fixed code plus JSON config', () => {
     const scripts = variants.map(serverScript);
-    const code = scripts.map((s) => s.slice(0, s.indexOf('.apply(0,')));
+    const code = scripts.map((s) => s.slice(0, s.indexOf('.apply(0,JSON.parse(')));
     expect(new Set(code).size).toBe(1);
-    expect(scripts[0]).toMatch(/^\(function\(k,l,a,m,d,f,s,c\)\{.*\}\)\.apply\(0,\[.*\]\)$/);
+    expect(scripts[0]).toMatch(/^\(function\(k,l,a,m,d,f,s,c\)\{.*\}\)\.apply\(0,JSON\.parse\(".*"\)\)$/);
   });
 
   it('escapes hostile theme names so they cannot leave the script element', () => {
@@ -220,10 +243,12 @@ describe('script source', () => {
     div.innerHTML = ssr(<ThemeProvider themes={[hostile, '<!--', '&amp;', '\u2028\u2029']}>x</ThemeProvider>);
     expect(div.querySelectorAll('script')).toHaveLength(1);
     const script = div.querySelector('script')!.textContent!;
-    const json = script.slice(script.indexOf('.apply(0,') + 9, -1);
-    expect(json).not.toMatch(/[<>&\u2028\u2029]/);
-    // the JSON still holds the original names
-    expect(JSON.parse(json)[3]).toHaveProperty([hostile], hostile);
+    const literal = script.slice(script.indexOf('.apply(0,JSON.parse(') + 20, -2);
+    expect(literal).not.toMatch(/[<>&\u2028\u2029]/);
+    // the string literal still holds the JSON of the original names
+    const config = JSON.parse(JSON.parse(literal) as string) as unknown[];
+    expect(config[3]).toHaveProperty([hostile], hostile);
+    expect(config[3]).toHaveProperty(['\u2028\u2029'], '\u2028\u2029');
   });
 
   it('is identical however the bundle was compiled (next-themes #370)', () => {
