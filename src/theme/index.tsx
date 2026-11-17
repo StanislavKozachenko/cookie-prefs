@@ -172,8 +172,11 @@ function Theme({
   const script = themeScript(fresh);
   // Only the first script is rendered: it ran (or not) when the page was parsed, the
   // client copy is inert, and new text on a hydrated script is an `innerHTML` write
-  // that enforced Trusted Types reject. The live config below drives the client.
-  const [first] = useState(script);
+  // that enforced Trusted Types reject. The live config below drives the client. The
+  // `__html` object is kept too: React 19.0 to 19.2 and the canaries of Next 14 / 15
+  // compare it by identity and re-write `innerHTML` on every re-render, and this
+  // provider always re-renders after hydration.
+  const [first] = useState({ __html: script });
   // Inline `themes`, `value` and `cookie` literals are new objects on every render, so
   // the store, the config and the setter are keyed on the script, which encodes all of
   // them but `cookie`, and on `cookie` as JSON.
@@ -266,7 +269,7 @@ function Theme({
         type={server ? 'text/javascript' : 'text/plain'}
         nonce={server ? nonce : undefined}
         suppressHydrationWarning
-        dangerouslySetInnerHTML={{ __html: first }}
+        dangerouslySetInnerHTML={first}
       />
       {children}
     </Context.Provider>
