@@ -156,7 +156,7 @@ import { PrefsProvider } from 'prefkit/react'
 
 ### `prefkit/next`
 
-`PrefsProvider` (an async Server Component) and `getPrefs`, shown above. Both read the request's raw `Cookie` header and parse it the way the browser parses `document.cookie` (the first of duplicate cookies wins, quotes are stripped), so the server never disagrees with what the inline script already put on `<html>`.
+`PrefsProvider` (an async Server Component) and `getPrefs`, shown above. Both read the request's raw `Cookie` header and parse it the way the browser parses `document.cookie` (the first of duplicate cookies wins, quotes are stripped), so the server never disagrees with what the inline script already put on `<html>`. A pref cookie set or deleted earlier in the same request is taken from `cookies()` instead, which is how a Server Action write shows up in its own response.
 
 ## Next.js modes
 
