@@ -109,8 +109,11 @@ jobs:
               content = f.read()
           with open('/tmp/changelog-entry.md', 'r') as f:
               entry = f.read()
-          idx = content.index('---\n') + 4
-          content = content[:idx] + '\n' + entry + content[idx:]
+          # Releases go below the "## [Unreleased]" section, which ends with its own
+          # "---" rule, and above older releases.
+          start = content.index('## [Unreleased]')
+          idx = content.index('\n---\n', start) + 5
+          content = content[:idx] + '\n' + entry.rstrip('\n') + '\n' + content[idx:]
           with open('CHANGELOG.md', 'w') as f:
               f.write(content)
           PYEOF
