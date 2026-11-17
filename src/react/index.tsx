@@ -4,6 +4,7 @@ import {
   useEffect,
   useLayoutEffect,
   useMemo,
+  useState,
   useSyncExternalStore,
   type ReactElement,
   type ReactNode,
@@ -48,7 +49,8 @@ export interface PrefsProviderProps {
   snapshot?: PrefsSnapshot | undefined;
   /**
    * Inline script from `prefsScript()`. Rendered once as the provider's first child, so
-   * place the provider at the top of `<body>`. It runs before paint on the initial
+   * place the provider at the top of `<body>`. Only the first value is rendered; a
+   * later one is still applied on `<html>`. It runs before paint on the initial
    * document and is inert on the client, so React does not warn about it. The
    * provider applies its reflections again with plain DOM calls, without running it,
    * on mount (React can reset `<html>` attributes on remount) and whenever the tab
@@ -93,11 +95,15 @@ export function PrefsProvider({ children, snapshot, script, nonce }: PrefsProvid
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, [script]);
 
+  // Only the first script is rendered: it ran (or not) when the page was parsed, the
+  // client copy is inert, and new text on a hydrated script is an `innerHTML` write
+  // that enforced Trusted Types reject. The live `script` drives the effect above.
+  const [first] = useState(script);
   // Evaluated per render: on the server there is no `document`.
   const server = typeof document == 'undefined';
   return (
     <Snapshot.Provider value={merged}>
-      {script ? (
+      {first ? (
         <script
           // `text/plain` on the client makes the element a data block: React does not
           // warn about it, and a client-rendered copy never runs. The server copy runs
@@ -105,7 +111,7 @@ export function PrefsProvider({ children, snapshot, script, nonce }: PrefsProvid
           type={server ? 'text/javascript' : 'text/plain'}
           nonce={server ? nonce : undefined}
           suppressHydrationWarning
-          dangerouslySetInnerHTML={{ __html: script }}
+          dangerouslySetInnerHTML={{ __html: first }}
         />
       ) : null}
       {children}
