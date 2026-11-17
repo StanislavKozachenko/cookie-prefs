@@ -257,7 +257,7 @@ export function ThemeToggle() {
 }
 ```
 
-The props (`themes`, `forcedTheme`, `enableSystem`, `disableTransitionOnChange`, `enableColorScheme`, `storageKey`, `defaultTheme`, `attribute`, `value`, `nonce`, `scriptProps`) and the `useTheme` fields (`theme`, `setTheme`, `resolvedTheme`, `systemTheme`, `themes`, `forcedTheme`) keep their next-themes names and defaults. The one new prop is `cookie`, the cookie attributes of the theme (the same options as `.options()` above):
+The props (`themes`, `forcedTheme`, `enableSystem`, `disableTransitionOnChange`, `enableColorScheme`, `storageKey`, `defaultTheme`, `attribute`, `value`, `nonce`, `scriptProps`) and the `useTheme` fields (`theme`, `setTheme`, `resolvedTheme`, `systemTheme`, `themes`, `forcedTheme`) keep their next-themes names and defaults. The one new prop is `cookie`, the cookie attributes of the theme (`path`, `domain`, `maxAge`, `sameSite`, `secure`, `partitioned`):
 
 ```tsx
 // one theme for all subdomains
