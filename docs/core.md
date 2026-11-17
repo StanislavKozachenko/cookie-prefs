@@ -1,0 +1,61 @@
+# Core and React guide
+
+Builders, handles and server helpers of `prefkit`, and `prefkit/react` outside Next.js. Back to the [README](../README.md).
+
+## Builders
+
+`pref.enum([...])`, `pref.boolean()`, `pref.number()`, `pref.string()`, `pref.json(schema)` and `pref.custom({ parse, serialize })`. Each takes `.default(value)` (removes `undefined` from the read type) and `.options({ name, path, maxAge, ... })`; enum, boolean, number and string also take `.reflect(...)` (see [Reflection](reflection.md)).
+
+`pref.json` requires a synchronous [Standard Schema](https://standardschema.dev) validator (zod, valibot, arktype), because cookies are user-controlled input. Writes take the schema's input type, reads return its output. For anything else use `pref.custom`.
+
+```ts
+import { definePrefs, pref, readPrefs } from 'prefkit'
+import * as z from 'zod'
+
+export const prefs = definePrefs(
+  {
+    density: pref.enum(['compact', 'cozy']).default('cozy'),
+    columns: pref.json(z.array(z.string())).default([]),
+  },
+  { prefix: 'app.' }, // cookie names become `app.density`, `app.columns`
+)
+
+// In the browser, outside React too
+prefs.density.get()                         // 'cozy', read from document.cookie
+prefs.density.set('compact')                // writes the cookie, notifies subscribers and other tabs
+prefs.density.set((d) => (d == 'cozy' ? 'compact' : 'cozy'))
+prefs.density.reset()                       // deletes the cookie, back to the default
+const stop = prefs.density.subscribe((density) => {}) // returns an unsubscribe function
+
+// On any server (request handler, middleware, Remix loader, Astro)
+const values = readPrefs(prefs, request.headers.get('cookie')) // { density, columns }, typed
+prefs.density.read(request.cookies)         // one pref; accepts a header string, a cookie store or a map
+response.cookies.set(prefs.density.toCookie('compact'))
+```
+
+Clearing is `reset()`, never `set(undefined)`. `set()` and `reset()` do nothing on the server and `get()` returns the default there: use `read()` or `getPrefs()` instead.
+
+`toCookie()` returns the cookie as `{ name, value, path, maxAge, sameSite, ... }`, which Next.js `cookies().set()` accepts. Its `value` is not URI-encoded: frameworks encode on set, but if you write a raw `Set-Cookie` header yourself, pass the value through `encodeURIComponent`.
+
+## Cookie options and defaults
+
+`Path=/`, `SameSite=Lax`, `Max-Age` of 400 days (the cap browsers enforce; every write refreshes it), no `Domain`, and `Secure` added automatically on `https:` pages for browser writes. `toCookie()` omits `Secure` unless you set it. Change them for all prefs in `definePrefs(shape, options)` or per pref with `.options()`. `prefix: '__Host-'` opts into a cookie prefix and also needs `secure: true` and no `domain`.
+
+## `prefkit/react` outside Next.js
+
+`usePref(pref)` returns `[value, setValue]`. Every component using the same pref stays in sync, also across tabs.
+
+Outside Next.js (Vite, Remix, TanStack Start), wrap the app once so the server render sees the request's cookies and the pre-paint script is emitted:
+
+```tsx
+import { prefsScript, snapshotPrefs } from 'prefkit'
+import { PrefsProvider } from 'prefkit/react'
+
+<PrefsProvider snapshot={snapshotPrefs(prefs, cookieHeader)} script={prefsScript(prefs)} nonce={nonce}>
+  <App />
+</PrefsProvider>
+```
+
+`snapshot` holds only the raw cookies of your prefs and is serializable. Omit it for a static page: hooks then render defaults until hydration ends. Place the provider at the top of `<body>`. In the Pages Router, compute the snapshot in `getServerSideProps` and pass it to the provider in `_app`.
+
+See also: [Next.js guide](nextjs.md), [security and platform notes](security.md).
