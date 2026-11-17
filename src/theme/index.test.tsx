@@ -262,6 +262,29 @@ describe('system theme', () => {
     expect(system.listeners.size).toBe(0);
   });
 
+  it('falls back to addListener where MediaQueryList has no addEventListener (Safari < 14)', () => {
+    let dark = false;
+    const listeners = new Set<() => void>();
+    vi.stubGlobal('matchMedia', () => ({
+      get matches() {
+        return dark;
+      },
+      addListener: (listener: () => void) => listeners.add(listener),
+      removeListener: (listener: () => void) => listeners.delete(listener),
+    }));
+    render(app({ attribute: 'class' }));
+    expect(html.className).toBe('light');
+    act(() => {
+      dark = true;
+      listeners.forEach((listener) => listener());
+    });
+    expect(html.className).toBe('dark');
+    expect(current.systemTheme).toBe('dark');
+    act(() => root!.unmount());
+    root = undefined;
+    expect(listeners.size).toBe(0);
+  });
+
   it('works without matchMedia (jsdom without a mock)', () => {
     vi.stubGlobal('matchMedia', undefined);
     render(app());

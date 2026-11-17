@@ -84,10 +84,15 @@ const DEFAULT_THEMES = ['light', 'dark'];
 // React 18 warns about `useLayoutEffect` during SSR; the effects only matter in the browser.
 const useLayout = typeof document == 'undefined' ? useEffect : useLayoutEffect;
 
+// Safari and iOS before 14 only have the older `addListener` / `removeListener`.
 const subscribeSystem = (onChange: () => void) => {
   const query = media();
-  query?.addEventListener('change', onChange);
-  return () => query?.removeEventListener('change', onChange);
+  if (query?.addEventListener) query.addEventListener('change', onChange);
+  else query?.addListener(onChange);
+  return () => {
+    if (query?.removeEventListener) query.removeEventListener('change', onChange);
+    else query?.removeListener(onChange);
+  };
 };
 
 const none = () => undefined;
