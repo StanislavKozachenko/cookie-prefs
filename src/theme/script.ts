@@ -54,7 +54,7 @@ export const themeScript = (config: Config): string =>
   ')';
 
 /** Own key check; theme names are user input and may be `__proto__` or `toString`. */
-export const has = (map: object, key: string) => Object.prototype.hasOwnProperty.call(map, key);
+export const has = (map: object, key: string) => ({}).hasOwnProperty.call(map, key);
 
 /** The `prefers-color-scheme` query; `undefined` where `matchMedia` is missing (jsdom). */
 export const media = () => globalThis.matchMedia?.(MEDIA);
