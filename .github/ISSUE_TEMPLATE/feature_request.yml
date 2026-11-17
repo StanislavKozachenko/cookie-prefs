@@ -7,10 +7,10 @@ body:
     attributes:
       label: Entry point
       options:
-        - prefkit (core)
-        - prefkit/react
-        - prefkit/next
-        - prefkit/theme
+        - cookie-prefs (core)
+        - cookie-prefs/react
+        - cookie-prefs/next
+        - cookie-prefs/theme
         - Not sure
     validations:
       required: true

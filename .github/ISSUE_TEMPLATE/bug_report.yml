@@ -7,16 +7,16 @@ body:
     attributes:
       label: Entry point
       options:
-        - prefkit (core)
-        - prefkit/react
-        - prefkit/next
-        - prefkit/theme
+        - cookie-prefs (core)
+        - cookie-prefs/react
+        - cookie-prefs/next
+        - cookie-prefs/theme
     validations:
       required: true
   - type: input
     id: version
     attributes:
-      label: prefkit version
+      label: cookie-prefs version
     validations:
       required: true
   - type: input
