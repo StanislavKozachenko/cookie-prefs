@@ -60,6 +60,76 @@ jobs:
       - run: npm run typecheck
       - run: npm test
 
+  e2e:
+    name: E2E on Next ${{ matrix.next }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        next: [14, 15, 16]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            e2e/package-lock.json
+
+      - run: npm ci
+      - run: npm ci --prefix e2e
+
+      - name: Read the Playwright version
+        id: playwright
+        run: echo "version=$(node -p "require('./e2e/node_modules/@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache the Playwright browser
+        id: browser
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium
+
+      # A cache hit restores the browser only: the system libraries still have to be installed.
+      - name: Install Chromium
+        if: steps.browser.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+        working-directory: e2e
+
+      - name: Install the system libraries for Chromium
+        if: steps.browser.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+        working-directory: e2e
+
+      - name: Cache the Next.js build cache
+        uses: actions/cache@v6
+        with:
+          path: e2e/.apps/next${{ matrix.next }}/.next/cache
+          key: next-cache-${{ matrix.next }}-${{ hashFiles('e2e/versions.json', 'e2e/app/**') }}
+          restore-keys: next-cache-${{ matrix.next }}-
+
+      - name: Build and pack the package
+        run: node e2e/scripts/run.mjs ${{ matrix.next }} pack
+
+      - name: Install and build the Next.js ${{ matrix.next }} app
+        run: node e2e/scripts/run.mjs ${{ matrix.next }} app
+
+      - name: Run the Playwright suite
+        run: node e2e/scripts/run.mjs ${{ matrix.next }} test
+
+      - name: Upload the Playwright report and traces
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-next-${{ matrix.next }}
+          path: |
+            e2e/report
+            e2e/results
+          retention-days: 7
+
   changelog-check:
     name: CHANGELOG pre-check
     runs-on: ubuntu-latest
@@ -87,12 +157,12 @@ jobs:
   ci-ok:
     name: CI ok
     runs-on: ubuntu-latest
-    needs: [test, audit, react-18]
+    needs: [test, audit, react-18, e2e]
     if: always()
     steps:
       - name: Fail unless every required job passed
         run: |
-          if [ "${{ needs.test.result }}" != "success" ] || [ "${{ needs.audit.result }}" != "success" ] || [ "${{ needs.react-18.result }}" != "success" ]; then
-            echo "::error::test: ${{ needs.test.result }}, audit: ${{ needs.audit.result }}, react-18: ${{ needs.react-18.result }}"
+          if [ "${{ needs.test.result }}" != "success" ] || [ "${{ needs.audit.result }}" != "success" ] || [ "${{ needs.react-18.result }}" != "success" ] || [ "${{ needs.e2e.result }}" != "success" ]; then
+            echo "::error::test: ${{ needs.test.result }}, audit: ${{ needs.audit.result }}, react-18: ${{ needs.react-18.result }}, e2e: ${{ needs.e2e.result }}"
             exit 1
           fi
