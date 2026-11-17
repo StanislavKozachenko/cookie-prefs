@@ -51,7 +51,7 @@ export function DensityToggle() {
 
 ## Server writes and hooks
 
-A pref written on the server with `toCookie()` (a Server Action, middleware) is not announced to client hooks. Where the CookieStore API exists, the store receives its `change` event, re-reads `document.cookie`, and updates hooks and the `<html>` reflection. Elsewhere (Safari before 18.4, Firefox before 140) hooks and the reflection keep the old value until the page reloads, unless it re-renders with a new snapshot (`mode="server"`). When the UI must update immediately, also call the client `set()`.
+A pref written on the server with `toCookie()` (a Server Action, middleware) is not announced to client hooks. Where the CookieStore API exists, the store receives its `change` event, re-reads `document.cookie`, and updates hooks and the `<html>` reflection. Elsewhere (Safari before 18.4, Firefox before 140) hooks and the reflection keep the old value until the tab becomes visible again (the store then re-reads `document.cookie` for every subscribed pref, which includes every pref a hook uses, and `PrefsProvider` re-applies the reflection of the others) or the page re-renders with a new snapshot (`mode="server"`). When the UI must update immediately, also call the client `set()`.
 
 ## Nonce
 
