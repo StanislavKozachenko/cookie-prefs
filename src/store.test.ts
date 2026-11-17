@@ -93,6 +93,33 @@ describe('get / set / reset', () => {
   });
 });
 
+describe('sandboxed iframe (document.cookie throws)', () => {
+  const sandbox = () => {
+    const denied = () => {
+      throw new DOMException('The document is sandboxed and lacks the "allow-same-origin" flag.', 'SecurityError');
+    };
+    Object.defineProperty(document, 'cookie', { configurable: true, get: denied, set: denied });
+  };
+
+  it('reads the default and never throws', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const prefs = make();
+    sandbox();
+    const listener = vi.fn();
+    const off = prefs.theme.subscribe(listener);
+    expect(prefs.theme.get()).toBe('system');
+    expect(prefs.columns.get()).toBe(prefs.columns.defaultValue);
+    expect(() => prefs.theme.set('dark')).not.toThrow();
+    expect(() => prefs.theme.set((t) => (t == 'dark' ? 'light' : 'dark'))).not.toThrow();
+    expect(() => prefs.theme.reset()).not.toThrow();
+    expect(prefs.theme.get()).toBe('system');
+    expect(html.className).toBe('system');
+    expect(listener).not.toHaveBeenCalled();
+    off();
+    warn.mockRestore();
+  });
+});
+
 describe('browser cookie attributes', () => {
   it('writes the default attributes and no Secure on http', () => {
     const writes = spyCookieWrites();
