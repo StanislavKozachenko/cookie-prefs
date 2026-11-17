@@ -9,7 +9,7 @@ export default defineConfig({
     index: 'src/index.ts',
     'react/index': 'src/react/index.tsx',
     'next/index': 'src/next/index.tsx',
-    'theme/index': 'src/theme/index.ts',
+    'theme/index': 'src/theme/index.tsx',
   },
   format: ['esm', 'cjs'],
   dts: true,
