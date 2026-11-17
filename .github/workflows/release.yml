@@ -135,7 +135,8 @@ jobs:
           if [ -n "$(npm view "prefkit@${VERSION}" version 2>/dev/null)" ]; then
             echo "prefkit@${VERSION} is already on npm, skipping publish"
           else
-            npm publish --provenance
+            # The checks and the build already ran above, so skip the prepublishOnly hook
+            npm publish --provenance --ignore-scripts
           fi
 
       # The commit is made through the API rather than pushed, so GitHub signs
