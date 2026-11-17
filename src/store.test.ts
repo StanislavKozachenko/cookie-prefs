@@ -120,6 +120,38 @@ describe('sandboxed iframe (document.cookie throws)', () => {
   });
 });
 
+describe('lone surrogates', () => {
+  const text = '😀abc'.slice(1); // lone low surrogate, e.g. a truncated input
+
+  it('set() stores U+FFFD in their place', () => {
+    const prefs = make();
+    expect(() => prefs.locale.set(text)).not.toThrow();
+    expect(prefs.locale.get()).toBe('�abc');
+    expect(html.getAttribute('data-locale')).toBe('�abc');
+    // JSON.stringify escapes lone surrogates, so json prefs keep them as they are
+    prefs.columns.set([text]);
+    expect(prefs.columns.get()).toEqual([text]);
+  });
+
+  it('set() writes nothing and does not throw without String.prototype.toWellFormed', () => {
+    const proto = String.prototype as { toWellFormed?: unknown };
+    const original = proto.toWellFormed;
+    // A no-op rather than deleting it: jsdom's own `document.cookie` setter uses it.
+    proto.toWellFormed = function (this: string) {
+      return String(this);
+    };
+    try {
+      const prefs = make();
+      prefs.locale.set('ok');
+      expect(() => prefs.locale.set(text)).not.toThrow();
+      expect(prefs.locale.get()).toBe('ok');
+      expect(html.getAttribute('data-locale')).toBe('ok');
+    } finally {
+      proto.toWellFormed = original;
+    }
+  });
+});
+
 describe('browser cookie attributes', () => {
   it('writes the default attributes and no Secure on http', () => {
     const writes = spyCookieWrites();
