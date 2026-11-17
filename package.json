@@ -124,7 +124,7 @@
     {
       "name": "cookie-prefs/theme",
       "path": "dist/theme/index.js",
-      "limit": "1910 B",
+      "limit": "1900 B",
       "gzip": true,
       "ignore": [
         "cookie-prefs"
