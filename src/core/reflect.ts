@@ -54,18 +54,19 @@ export const apply = (targets: readonly string[], kind: Kind | undefined, s: str
  * enum value named `__proto__` would set the prototype instead of adding a key.
  * `src/react/reapply.ts` ports it to DOM calls and finds the config after the only
  * `})("`: keep both in sync (parity test in `src/react/__tests__/reapply.test.ts`).
- * `r`, `t` and `n` (`<html>`, value map, DOM string) are the names minifiers give the
- * same values in `apply`, so gzip finds the repeated DOM code: keep them.
+ * `r`, `t`, `n`, `i` and `e` (`<html>`, value map, DOM string, target, class key) are
+ * the names minifiers give the same values in `apply`, so gzip finds the repeated DOM
+ * code as one run: keep them, and check the minified `apply` when either changes.
  */
 const SOURCE =
-  '(function(P){var r=document.documentElement,C="; "+document.cookie,i=0,j,p,t,n,c,x,k;' +
-  'for(P=JSON.parse(P);p=P[i++];)try{t=p[2];n=C.split("; "+p[0]+"=")[1];' +
+  '(function(P){var r=document.documentElement,C="; "+document.cookie,k=0,j,p,t,n,c,i,e;' +
+  'for(P=JSON.parse(P);p=P[k++];)try{t=p[2];n=C.split("; "+p[0]+"=")[1];' +
   'if(n!=null)try{n=decodeURIComponent(n.split(";")[0].replace(/^"(.*)"$/,"$1"));' +
   'if(t===1){c=parseFloat(n);n=c===+n&&isFinite(c)?""+c:null}' +
   'else if(t)n={}.hasOwnProperty.call(t,n)?t[n]:null}catch(e){n=null}' +
   'if(n==null)n=p[3];' +
-  'for(j=0;x=p[1][j++];)if(x=="class"){for(k in t)r.classList.remove(t[k]);n!=null&&r.classList.add(n)}' +
-  'else x[0]=="-"?n==null?r.style.removeProperty(x):r.style.setProperty(x,n):n==null?r.removeAttribute(x):r.setAttribute(x,n)}catch(e){}})(';
+  'for(j=0;i=p[1][j++];)if(i=="class"){for(e in t)r.classList.remove(t[e]);n!=null&&r.classList.add(n)}' +
+  'else i[0]=="-"?n==null?r.style.removeProperty(i):r.style.setProperty(i,n):n==null?r.removeAttribute(i):r.setAttribute(i,n)}catch(e){}})(';
 
 /**
  * The inline script for these reflections, or `''` when there are none. The config is
