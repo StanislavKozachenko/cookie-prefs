@@ -31,12 +31,16 @@ export const defaults = { path: '/', maxAge: 34560000, sameSite: 'lax' } as cons
 
 /**
  * `Set-Cookie`-style string for `document.cookie`. `value` undefined deletes the
- * cookie. `Secure` defaults to on for `https:` pages.
+ * cookie. `Secure` defaults to on for `https:` pages. Lone surrogates, which
+ * `encodeURIComponent` rejects, become U+FFFD where `String.prototype.toWellFormed`
+ * exists; elsewhere this throws and the caller writes nothing.
  */
 export const serialize = (c: Omit<CookieInit, 'value'> & CookieOptions, value?: string): string =>
   c.name +
   '=' +
-  (value == null ? '' : encodeURIComponent(value)) +
+  (value == null
+    ? ''
+    : encodeURIComponent((value as unknown as { toWellFormed?(): string }).toWellFormed?.() ?? value)) +
   '; Path=' +
   c.path +
   (c.domain ? '; Domain=' + c.domain : '') +

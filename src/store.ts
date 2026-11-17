@@ -78,7 +78,8 @@ export const bind = (key: string, def: Def, prefix: string, options: CookieOptio
       document.cookie = serialize(attrs, value);
       post();
     } catch {
-      // sandboxed iframe: `document.cookie` throws; nothing is written
+      // sandboxed iframe (`document.cookie` throws), or a lone surrogate without
+      // `toWellFormed` (see `serialize`): nothing is written
     }
     check();
   };
