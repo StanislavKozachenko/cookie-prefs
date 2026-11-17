@@ -1,0 +1,239 @@
+import { definePrefs, pref } from 'prefkit';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useReducer,
+  useSyncExternalStore,
+  type DetailedHTMLProps,
+  type Dispatch,
+  type ReactElement,
+  type ReactNode,
+  type ScriptHTMLAttributes,
+  type SetStateAction,
+} from 'react';
+import { has, LIGHT_DARK, media, paint, pauseTransitions, system, themeScript, type Config } from './script';
+
+/** `class` or any `data-*` attribute on `<html>`. */
+export type Attribute = `data-${string}` | 'class';
+
+/** Props for the inline script element, as in next-themes. */
+export interface ScriptProps
+  extends DetailedHTMLProps<ScriptHTMLAttributes<HTMLScriptElement>, HTMLScriptElement> {
+  [dataAttribute: `data-${string}`]: unknown;
+}
+
+/** Same props and defaults as next-themes `ThemeProvider`. */
+export interface ThemeProviderProps {
+  children?: ReactNode;
+  /** All theme names. `'system'` is added when `enableSystem` is on. @default ['light', 'dark'] */
+  themes?: string[] | undefined;
+  /** Theme used on this page regardless of the stored choice; the choice is kept. */
+  forcedTheme?: string | undefined;
+  /** Resolve `'system'` from `prefers-color-scheme`. @default true */
+  enableSystem?: boolean | undefined;
+  /** Disable CSS transitions while the theme switches. @default false */
+  disableTransitionOnChange?: boolean | undefined;
+  /** Set `color-scheme` on `<html>` for built-in UI (inputs, scrollbars). @default true */
+  enableColorScheme?: boolean | undefined;
+  /**
+   * Cookie name that stores the choice. A value left in `localStorage` under the same
+   * key by next-themes is moved to the cookie once. @default 'theme'
+   */
+  storageKey?: string | undefined;
+  /** Theme when nothing is stored. @default enableSystem ? 'system' : 'light' */
+  defaultTheme?: string | undefined;
+  /** Where the theme is written on `<html>`; accepts a list. @default 'data-theme' */
+  attribute?: Attribute | Attribute[] | undefined;
+  /** Theme name to the value written to the DOM. */
+  value?: Record<string, string> | undefined;
+  /** CSP nonce for the inline script and the transition-disabling style. */
+  nonce?: string | undefined;
+  /** Extra props for the inline script element. */
+  scriptProps?: ScriptProps | undefined;
+}
+
+/**
+ * Return type of `useTheme()`, same fields as next-themes. `T` narrows theme names;
+ * the default `string` matches next-themes exactly.
+ */
+export interface UseThemeProps<T extends string = string> {
+  /** All theme names, including `'system'` when `enableSystem` is on. */
+  themes: (T | 'system')[];
+  /** Forced theme of the current page, if any. */
+  forcedTheme?: T | undefined;
+  /** Store a theme; accepts a value or an updater. */
+  setTheme: Dispatch<SetStateAction<T | 'system'>>;
+  /** Stored theme, possibly `'system'`. `undefined` during SSR and hydration. */
+  theme?: T | 'system' | undefined;
+  /** Theme actually shown (`'system'` resolved). `undefined` during SSR and hydration. */
+  resolvedTheme?: T | undefined;
+  /** OS preference when `enableSystem` is on. `undefined` during SSR and hydration. */
+  systemTheme?: 'light' | 'dark' | undefined;
+}
+
+const Context = createContext<UseThemeProps | undefined>(undefined);
+
+/** What `useTheme()` returns outside a provider, as in next-themes. */
+const outside: UseThemeProps = { setTheme: () => {}, themes: [] };
+
+const DEFAULT_THEMES = ['light', 'dark'];
+
+// React 18 warns about `useLayoutEffect` during SSR; the effects only matter in the browser.
+const useLayout = typeof document == 'undefined' ? useEffect : useLayoutEffect;
+
+const subscribeSystem = (onChange: () => void) => {
+  const query = media();
+  query?.addEventListener('change', onChange);
+  return () => query?.removeEventListener('change', onChange);
+};
+
+const none = () => undefined;
+
+/**
+ * Drop-in replacement for next-themes `ThemeProvider`, stored in a cookie so the
+ * server can read it. Migration is an import swap. Its inline script never triggers
+ * the React 19 script warning and needs no `cookies()` read, so pages stay static.
+ * Add `suppressHydrationWarning` to `<html>`.
+ * @example
+ * <html lang="en" suppressHydrationWarning>
+ *   <body>
+ *     <ThemeProvider attribute="class" defaultTheme="system">{children}</ThemeProvider>
+ *   </body>
+ * </html>
+ */
+export function ThemeProvider(props: ThemeProviderProps): ReactElement;
+export function ThemeProvider(props: ThemeProviderProps): ReactElement {
+  // Like next-themes, a nested provider only passes its children through.
+  return useContext(Context) ? <>{props.children}</> : <Theme {...props} />;
+}
+
+function Theme({
+  children,
+  themes = DEFAULT_THEMES,
+  forcedTheme,
+  enableSystem = true,
+  disableTransitionOnChange = false,
+  enableColorScheme = true,
+  storageKey = 'theme',
+  defaultTheme = enableSystem ? 'system' : 'light',
+  attribute = 'data-theme',
+  value,
+  nonce,
+  scriptProps,
+}: ThemeProviderProps): ReactElement {
+  const listed = enableSystem ? [...themes, 'system'] : themes;
+  // Every valid stored name to its DOM string. `value` keys are themes too, as in the
+  // next-themes README example.
+  const dom = Object.fromEntries(listed.map((t) => [t, t]).concat(Object.entries(value || {})));
+  const fresh: Config = [
+    encodeURIComponent(storageKey), // the core's cookie name for `name: storageKey`
+    storageKey,
+    ([] as string[]).concat(attribute),
+    dom,
+    defaultTheme,
+    forcedTheme || null,
+    enableSystem ? 1 : 0,
+    // `color-scheme` for other themes: the default when it is light or dark, as in next-themes
+    enableColorScheme ? (LIGHT_DARK.test(defaultTheme) ? defaultTheme : '') : null,
+  ];
+  const script = themeScript(fresh);
+  // Inline `themes` and `value` literals are new objects on every render, so the store,
+  // the config and the setter are keyed on the script, which encodes all of them.
+  const [handle, config, themeList, setTheme] = useMemo(() => {
+    const handle = definePrefs({
+      theme: pref
+        .enum(Object.keys(dom) as [string])
+        .default(defaultTheme)
+        .options({ name: storageKey }),
+    }).theme;
+    const setTheme: UseThemeProps['setTheme'] = (next) => {
+      const name = typeof next == 'function' ? next(handle.get()) : next;
+      // A name outside the list would read back as the default: keep the stored one.
+      if (has(dom, name)) handle.set(name);
+    };
+    return [handle, fresh, listed, setTheme] as const;
+  }, [script]);
+
+  // External stores, so a provider kept hidden by <Activity> never holds a stale theme
+  // (next-themes #375). `undefined` during SSR and hydration, as in next-themes.
+  const theme = useSyncExternalStore(handle.subscribe, handle.get, none);
+  const systemTheme = useSyncExternalStore(subscribeSystem, system, none);
+  const resolvedTheme = theme == 'system' && enableSystem ? systemTheme : theme;
+  const [, refresh] = useReducer((n: number) => n + 1, 0);
+
+  // Runs on mount, so it also restores `<html>` after React reset it on a remount
+  // (Strict Mode), and on every change. It reads the current cookie, never rendered
+  // state, so re-running on an <Activity> reveal cannot bring an old theme back.
+  useLayout(() => {
+    // One-time move from next-themes: no cookie yet, a valid name in localStorage.
+    // After the first write the cookie exists and this is a string search.
+    try {
+      if (('; ' + document.cookie).indexOf('; ' + handle.name + '=') < 0) {
+        const stored = localStorage.getItem(config[1]);
+        if (stored != null && has(config[3], stored)) handle.set(stored);
+      }
+    } catch {
+      // storage unavailable: keep the default
+    }
+    const resume = disableTransitionOnChange && pauseTransitions(nonce);
+    paint(config, handle.get());
+    if (resume) resume();
+    // Something without a notification (a server `Set-Cookie`, another library) may have
+    // changed the cookie while the tab was hidden: repaint, and re-render so the hook
+    // reads the cookie again.
+    const onVisible = () => {
+      if (document.visibilityState == 'visible') {
+        paint(config, handle.get());
+        refresh();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [config, handle, theme, systemTheme, disableTransitionOnChange, nonce]);
+
+  const context = useMemo<UseThemeProps>(
+    () => ({
+      theme,
+      setTheme,
+      forcedTheme,
+      resolvedTheme,
+      themes: themeList,
+      systemTheme: enableSystem ? systemTheme : undefined,
+    }),
+    [theme, setTheme, forcedTheme, resolvedTheme, themeList, enableSystem, systemTheme],
+  );
+
+  // Evaluated per render: on the server there is no `document`.
+  const server = typeof document == 'undefined';
+  return (
+    <Context.Provider value={context}>
+      <script
+        {...scriptProps}
+        // `text/plain` on the client makes the element a data block: React 19 does not
+        // warn about it (next-themes #385, #387), and a client-rendered copy never
+        // runs. The server copy runs before paint. Both differences are expected
+        // during hydration; the server element keeps its nonce.
+        type={server ? 'text/javascript' : 'text/plain'}
+        nonce={server ? nonce : undefined}
+        suppressHydrationWarning
+        dangerouslySetInnerHTML={{ __html: script }}
+      />
+      {children}
+    </Context.Provider>
+  );
+}
+
+/**
+ * Current theme and setter, same shape as next-themes `useTheme()`. Works without a
+ * provider (returns `themes: []` and a no-op setter), like next-themes.
+ * @example
+ * const { resolvedTheme, setTheme } = useTheme()
+ * <button onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}>Toggle</button>
+ */
+export function useTheme<T extends string = string>(): UseThemeProps<T>;
+export function useTheme(): UseThemeProps {
+  return useContext(Context) ?? outside;
+}

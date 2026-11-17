@@ -13,9 +13,9 @@ One package, four entries, each with its own source file:
 | `prefkit`       | `src/index.ts`        |
 | `prefkit/react` | `src/react/index.tsx` |
 | `prefkit/next`  | `src/next/index.tsx`  |
-| `prefkit/theme` | `src/theme/index.ts`  |
+| `prefkit/theme` | `src/theme/index.tsx` |
 
-Status: core, `prefkit/react` and `prefkit/next` are implemented; `prefkit/theme` is a placeholder. `docs/design.md` is the contract.
+Status: core, `prefkit/react`, `prefkit/next` and `prefkit/theme` are implemented. `docs/design.md` is the contract.
 
 ## Commands
 
@@ -24,7 +24,7 @@ Status: core, `prefkit/react` and `prefkit/next` are implemented; `prefkit/theme
 - `npm run typecheck`: `tsc --noEmit`
 - `npm run lint`: ESLint flat config
 - `npm run check:package`: publint and arethetypeswrong (needs a build first)
-- `npm run size`: size-limit, 2 KB gzip budget on the core entry plus budgets for `prefkit/react` and `prefkit/next` (needs a build first)
+- `npm run size`: size-limit, 2 KB gzip budget on the core entry plus budgets for `prefkit/react`, `prefkit/next` and `prefkit/theme` (needs a build first)
 
 Run lint, typecheck, build, test, check:package and size before finishing a change.
 

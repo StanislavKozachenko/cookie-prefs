@@ -36,7 +36,7 @@ ci: add test matrix
 src/index.ts          prefkit (zero-dependency core)
 src/react/index.tsx   prefkit/react
 src/next/index.tsx    prefkit/next
-src/theme/index.ts    prefkit/theme
+src/theme/index.tsx   prefkit/theme
 ```
 
 The core must keep zero runtime dependencies and stay within the 2 KB gzip budget (`npm run size`).
