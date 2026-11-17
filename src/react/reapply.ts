@@ -24,7 +24,7 @@ export const reapply = (script: string) => {
             if (m === 1) {
               const n = parseFloat(v);
               v = n === +v && isFinite(n) ? '' + n : null;
-            } else if (m) v = Object.prototype.hasOwnProperty.call(m, v) ? m[v] : null;
+            } else if (m) v = ({}).hasOwnProperty.call(m, v) ? m[v] : null;
           } catch {
             v = null;
           }
