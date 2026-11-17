@@ -62,7 +62,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
-        {/* mode="script" (default): route stays static; mode="server": exact SSR from cookies() */}
+        {/* mode="script" (default): route stays static; mode="server": exact SSR from the Cookie header */}
         <PrefsProvider prefs={prefs}>{children}</PrefsProvider>
       </body>
     </html>
@@ -107,6 +107,7 @@ Other decisions:
 | --- | --- | --- |
 | `cookies()` is async (since 15.0 RC); readable in Server Components; `.set`/`.delete` only in Server Functions and Route Handlers ("HTTP does not allow setting cookies after streaming starts") | `getPrefs` is async; server writes use `toCookie()` in a Server Function | https://nextjs.org/docs/app/api-reference/functions/cookies |
 | Without Cache Components, `cookies()` in a layout makes the route dynamic; with Cache Components, outside `<Suspense>` it blocks prerendering | `mode="script"` default; `getPrefs` documented as dynamic | same, and https://nextjs.org/docs/messages/blocking-prerender-runtime |
+| `cookies()` parses the `Cookie` header with `@edge-runtime/cookies`: the last duplicate wins and quotes are kept, unlike `document.cookie` and the inline script. `headers()` has the same static/dynamic handling as `cookies()` (Next 16.4.6 `dist/server/request/headers.js`), but does not show cookies written earlier in the same request | `prefkit/next` reads `(await headers()).get('cookie')` and lets the core parse it; a Server Function write shows from the next request | `next/dist/compiled/@edge-runtime/cookies`, `next/dist/server/async-storage/request-store.js` |
 | `<html data-theme>` cannot be wrapped in `<Suspense>`; Next docs say move the read to a pre-paint client script plus `suppressHydrationWarning` | `<html>` reflection is always done by the script, in both modes | https://nextjs.org/docs/messages/blocking-prerender-runtime |
 | Next docs fix for the React dev warning on `<script>`: `type` `text/javascript` on server, `text/plain` on client, `suppressHydrationWarning` | used for the pre-paint script | https://nextjs.org/docs/app/guides/preventing-flash-before-hydration |
 | React warns only when creating a script element on the client and skips data-block scripts (`isScriptDataBlock`) | confirms the fix above | https://github.com/facebook/react/blob/main/packages/react-dom-bindings/src/client/ReactFiberConfigDOM.js |
@@ -127,7 +128,7 @@ Other decisions:
 - **Entry boundaries.** `prefkit/react` and `prefkit/theme` are client modules: their built files start with `'use client'`, prepended to the ESM and CJS output in tsup `onSuccess` (tree shaking strips a `banner` directive, and one config avoids `clean` races between parallel builds). `prefkit/next` is server-only: no `'use client'`, it imports `next/headers`. Server helpers must never live in a client entry, because a Server Component calling them gets a client reference.
 - **No duplicated state.** Runtime imports between entries use package specifiers (`'prefkit'`, `'prefkit/react'`) marked external in tsup, not relative paths, so the cross-tab listener and stores exist once and the client boundary survives bundling. Type-only imports from `../types` are fine.
 - **Duplicate copies.** Handles are portable across copies of the core (ESM + CJS, two versions): what `prefsScript` needs lives on the handle under a `Symbol.for` key, not in module state; two copies of `prefkit/react` still mean two React contexts, which is inherent to React.
-- **Next `PrefsProvider`** is an async Server Component: in `'server'` mode it awaits `cookies()` and passes `snapshotPrefs(prefs, store)`; in both modes it passes `prefsScript(prefs)` and `nonce` to the client `PrefsProvider` from `'prefkit/react'`. `prefs` itself never crosses to the client.
+- **Next `PrefsProvider`** is an async Server Component: in `'server'` mode it reads the raw `Cookie` header from `headers()` and passes `snapshotPrefs(prefs, header)`, as `getPrefs` reads it (never `cookies()`, whose parsing differs from the browser's); in both modes it passes `prefsScript(prefs)` and `nonce` to the client `PrefsProvider` from `'prefkit/react'`. `prefs` itself never crosses to the client.
 - **Snapshots must be stable** for `useSyncExternalStore`: cache the parsed value per pref by raw string, so `json` and `custom` prefs do not return a new object on every read.
 - **Own-write echo.** The CookieStore `change` event also fires for this tab's writes; compare raw values before notifying.
 - **Encoding.** Names and values are `encodeURIComponent`-encoded; booleans are `'true'`/`'false'`; enums and numbers are stored as is; `json` is `JSON.stringify` then encoded.
