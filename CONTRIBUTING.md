@@ -8,6 +8,18 @@ Open an issue with the entry point (`cookie-prefs`, `cookie-prefs/react`, `cooki
 
 Development needs Node.js 22 or newer (`.nvmrc` pins 22, so `nvm use` picks it); CI tests on Node.js 22 and 24. This is a toolchain requirement only: the published package declares no `engines`, so apps can install it on any Node.js version their Next.js and React support. Run `npm ci` to install.
 
+## End-to-end tests
+
+`e2e/` holds a Next.js App Router app and a Playwright suite (Chromium, production build) that run against the package packed from your checkout. Run one Next major at a time:
+
+```bash
+npm run e2e -- 16        # 14, 15 or 16: build and pack the package, install and build the app, run the tests
+npm run e2e -- 15 test   # only the tests, against the app built last time (steps: pack, app, test)
+npm run e2e -- 16 test -- -g theme   # arguments after the second `--` go to Playwright
+```
+
+The first run installs `e2e/`'s dependencies; if Chromium is missing, run `cd e2e && npx playwright install chromium`. The app is generated into `e2e/.apps/next<major>` (gitignored) from `e2e/app/`, with the versions pinned in `e2e/versions.json`; the specs are in `e2e/tests/`. CI runs the three majors in parallel as the `e2e` job; on failure it uploads the Playwright report and traces.
+
 ## Submitting changes
 
 Nothing is pushed to `main` directly.
@@ -42,6 +54,7 @@ src/core/             core internals: builder, cookie, store, sync, reflect, typ
 src/react/index.tsx   cookie-prefs/react
 src/next/index.tsx    cookie-prefs/next
 src/theme/index.tsx   cookie-prefs/theme
+e2e/                  Next.js app template and Playwright suite (not published)
 ```
 
 Tests go in the `__tests__` folder next to the code they cover: `src/core/__tests__/`, `src/react/__tests__/`, `src/next/__tests__/` and `src/theme/__tests__/`. Vitest runs `*.test.ts` and `*.test.tsx`; `*.test-d.ts` files are type tests, checked by `npm run typecheck`.

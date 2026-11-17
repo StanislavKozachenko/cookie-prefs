@@ -5,3 +5,8 @@ coverage/
 .claude/settings.local.json
 .claude/worktrees/
 *.tgz
+e2e/node_modules/
+e2e/.apps/
+e2e/.tmp/
+e2e/report/
+e2e/results/

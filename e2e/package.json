@@ -1,0 +1,13 @@
+{
+  "name": "cookie-prefs-e2e",
+  "private": true,
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tests",
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.1",
+    "@types/node": "^22.20.5",
+    "typescript": "5.9.3"
+  }
+}
