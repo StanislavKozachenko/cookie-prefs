@@ -44,3 +44,5 @@ The core must keep zero runtime dependencies and stay within the 2 KB gzip budge
 ## Releases
 
 Releases are published by the maintainer with the manual **Release** workflow (Actions, Release, Run workflow, pick patch / minor / major). It needs a `RELEASE_TOKEN` secret (contents write access) and npm publishing set up for the repository.
+
+The workflow checks and builds first, then publishes to npm, then commits the version bump and changelog to `main`, creates the tag and the GitHub release. If a step after the publish fails, fix the cause and re-run with the same bump: the publish is skipped when that version is already on npm. If the bump commit already landed, do not re-run; create the missing tag and release by hand.
