@@ -62,9 +62,8 @@ const SOURCE =
   'if(m===1){n=parseFloat(v);v=n===+v&&isFinite(n)?""+n:null}' +
   'else if(m)v={}.hasOwnProperty.call(m,v)?m[v]:null}catch(e){v=null}' +
   'if(v==null)v=p[3];' +
-  'for(j=0;t=p[1][j++];)if(t=="class"){for(k in m)h.classList.remove(m[k]);if(v!=null)h.classList.add(v)}' +
-  'else if(t[0]=="-"){if(v==null)h.style.removeProperty(t);else h.style.setProperty(t,v)}' +
-  'else if(v==null)h.removeAttribute(t);else h.setAttribute(t,v)}catch(e){}})(';
+  'for(j=0;t=p[1][j++];)if(t=="class"){for(k in m)h.classList.remove(m[k]);v!=null&&h.classList.add(v)}' +
+  'else t[0]=="-"?v==null?h.style.removeProperty(t):h.style.setProperty(t,v):v==null?h.removeAttribute(t):h.setAttribute(t,v)}catch(e){}})(';
 
 /**
  * The inline script for these reflections, or `''` when there are none. The config is
