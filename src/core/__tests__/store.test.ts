@@ -445,4 +445,18 @@ describe('reflection after changes', () => {
     expect(define({ a: 'x-y', b: 'é ' })).not.toThrow();
     expect(() => definePrefs({ t: pref.boolean().reflect('data-t') })).not.toThrow();
   });
+
+  it('rejects an empty cookie name in development only', () => {
+    expect(() => definePrefs({ t: pref.string().options({ name: '' }) })).toThrow(/t needs a non-empty cookie name/);
+    expect(() => definePrefs({ '': pref.string() })).toThrow(TypeError);
+    // a prefix alone or a name alone is enough
+    expect(() => definePrefs({ '': pref.string() }, { prefix: 'p' })).not.toThrow();
+    expect(() => definePrefs({ t: pref.string().options({ name: undefined }) })).not.toThrow();
+    vi.stubEnv('NODE_ENV', 'production');
+    try {
+      expect(() => definePrefs({ t: pref.string().options({ name: '' }) })).not.toThrow();
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
 });

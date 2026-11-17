@@ -39,7 +39,11 @@ export interface PrefsOptions extends CookieOptions {
 
 /** Options for a single pref, passed to `.options()`. They override `PrefsOptions`. */
 export interface PrefOptions extends CookieOptions {
-  /** Full cookie name for this pref. `prefix` is not applied to it. @default prefix + key */
+  /**
+   * Full cookie name for this pref. `prefix` is not applied to it. Must not be empty
+   * (`definePrefs()` throws in development).
+   * @default prefix + key
+   */
   name?: string | undefined;
 }
 

@@ -22,15 +22,18 @@ export const bind = (key: string, def: Def, prefix: string, options: CookieOptio
   const kind = def.values
     ? Object.fromEntries(def.values.map((v) => [v, merge<Record<string, string>>({ [v]: v }, def.m)[v]!]))
     : def.k;
-  // Dev only (dropped from production builds): `classList` rejects an empty token or one
-  // with whitespace, so such a class would never be applied, by the client or the script.
-  if (
-    typeof process == 'object' &&
-    process.env.NODE_ENV != 'production' &&
-    targets?.includes('class') &&
-    Object.values({ ...(kind as object) }).some((c) => !/^[^\t\n\f\r ]+$/.test(c as string))
-  )
-    throw TypeError(`cookie-prefs: ${key}.reflect('class') needs non-empty classes without whitespace`);
+  // Dev only (dropped from production builds). A cookie with an empty name is written
+  // as a bare value, which no read path takes for a cookie of any name. `classList`
+  // rejects an empty token or one with whitespace, so such a class would never be
+  // applied, by the client or the script.
+  if (typeof process == 'object' && process.env.NODE_ENV != 'production') {
+    if (!name) throw TypeError(`cookie-prefs: ${key} needs a non-empty cookie name`);
+    if (
+      targets?.includes('class') &&
+      Object.values({ ...(kind as object) }).some((c) => !/^[^\t\n\f\r ]+$/.test(c as string))
+    )
+      throw TypeError(`cookie-prefs: ${key}.reflect('class') needs non-empty classes without whitespace`);
+  }
   // Parsed value per raw string, so reads in the browser are referentially stable
   // (`useSyncExternalStore`, hydration from a snapshot). Bounded. Without a DOM every
   // read parses again: a json or custom value is an object that one request could
