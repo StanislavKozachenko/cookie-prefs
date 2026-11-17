@@ -40,9 +40,9 @@ export interface NextPrefsProviderProps<P extends PrefsRecord> {
    * needs `export const instant = false`).
    * @default 'script'
    */
-  mode?: 'script' | 'server';
+  mode?: 'script' | 'server' | undefined;
   /** CSP nonce for the inline script, e.g. from `(await headers()).get('x-nonce')`. */
-  nonce?: string;
+  nonce?: string | undefined;
   children?: ReactNode;
 }
 

@@ -13,7 +13,11 @@ import {
   type PrefValue,
   type PrefValues,
 } from './index';
-import { getPrefs, PrefsProvider as NextPrefsProvider } from './next/index';
+import {
+  getPrefs,
+  PrefsProvider as NextPrefsProvider,
+  type NextPrefsProviderProps,
+} from './next/index';
 import { PrefsProvider, usePref, type PrefSetter } from './react/index';
 import { ThemeProvider, useTheme, type ThemeProviderProps, type UseThemeProps } from './theme/index';
 
@@ -99,6 +103,11 @@ expectTypeOf(NextPrefsProvider<typeof prefs>)
   .parameter(0)
   .toHaveProperty('mode')
   .toEqualTypeOf<'script' | 'server' | undefined>();
+// Optional props take an explicit `undefined` under `exactOptionalPropertyTypes`.
+declare const maybeNonce: string | undefined;
+declare const maybeMode: 'script' | 'server' | undefined;
+const nextProps: NextPrefsProviderProps<typeof prefs> = { prefs, mode: maybeMode, nonce: maybeNonce };
+void NextPrefsProvider(nextProps);
 
 // Theme preset: next-themes compatible.
 expectTypeOf(useTheme()).toEqualTypeOf<UseThemeProps>();
