@@ -128,8 +128,10 @@ export function PrefsProvider({ children, snapshot, script, nonce }: PrefsProvid
 
   // Only the first script is rendered: it ran (or not) when the page was parsed, the
   // client copy is inert, and new text on a hydrated script is an `innerHTML` write
-  // that enforced Trusted Types reject. The live `script` drives the effect above.
-  const [first] = useState(script);
+  // that enforced Trusted Types reject. The live `script` drives the effect above. The
+  // `__html` object is kept too: React 19.0 to 19.2 and the canaries of Next 14 / 15
+  // compare it by identity and re-write `innerHTML` whenever the provider re-renders.
+  const [first] = useState(script && { __html: script });
   // Evaluated per render: on the server there is no `document`.
   const server = typeof document == 'undefined';
   return (
@@ -142,7 +144,7 @@ export function PrefsProvider({ children, snapshot, script, nonce }: PrefsProvid
           type={server ? 'text/javascript' : 'text/plain'}
           nonce={server ? nonce : undefined}
           suppressHydrationWarning
-          dangerouslySetInnerHTML={{ __html: first }}
+          dangerouslySetInnerHTML={first}
         />
       ) : null}
       {children}
