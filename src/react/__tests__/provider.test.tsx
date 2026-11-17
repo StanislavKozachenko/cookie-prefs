@@ -279,6 +279,20 @@ describe('reflection on <html>', () => {
     expect(html.getAttribute('data-sidebar')).toBe('false');
   });
 
+  it('and the hooks agree after a change nothing announced, once the tab is visible', () => {
+    // No CookieStore: a server `Set-Cookie` or a tab on a sibling subdomain fires nothing
+    const prefs = make();
+    render(app(prefs));
+    expect(document.querySelector('p')!.textContent).toBe('system true ');
+    document.cookie = 'theme=dark';
+    document.cookie = 'sidebar=false';
+    vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
+    act(() => document.dispatchEvent(new Event('visibilitychange')));
+    expect(html.className).toBe('dark');
+    expect(html.getAttribute('data-sidebar')).toBe('false');
+    expect(document.querySelector('p')!.textContent).toBe('dark false ');
+  });
+
   describe('under enforced Trusted Types', () => {
     let restore = () => {};
     afterEach(() => restore());

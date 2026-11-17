@@ -1,8 +1,10 @@
 /**
  * Cross-tab sync. Other tabs' writes arrive as a CookieStore `change` event where the
- * API exists, else as a message on a BroadcastChannel posted after each write. Either
- * way every subscribed pref re-reads `document.cookie` and notifies only if its value
- * changed, which also drops the echo of this tab's own writes.
+ * API exists, else as a message on a BroadcastChannel posted after each write. Changes
+ * nothing announces (a server `Set-Cookie` without CookieStore, a tab on a sibling
+ * subdomain) are picked up when the tab becomes visible. Every time, each subscribed
+ * pref re-reads `document.cookie` and notifies only if its value changed, which also
+ * drops the echo of this tab's own writes.
  */
 
 /**
@@ -23,8 +25,10 @@ const subs = new Set<() => void>();
 let off: (() => void) | undefined;
 
 const changed = () => subs.forEach((check) => check());
+/** Re-check on `visibilitychange` once the tab is shown, like `PrefsProvider` re-applies `<html>`. */
+const shown = () => document.visibilityState == 'visible' && changed();
 
-/** Add or remove a pref's re-check; attaches the listener on the first, detaches on the last. */
+/** Add or remove a pref's re-check; attaches the listeners on the first, detaches them on the last. */
 export const hub = (check: () => void, on: boolean) => {
   if (on) subs.add(check);
   else subs.delete(check);
@@ -33,14 +37,15 @@ export const hub = (check: () => void, on: boolean) => {
     off = undefined;
   } else if (!off) {
     const store = globalThis.cookieStore;
-    if (store) {
-      store.addEventListener('change', changed);
-      off = () => store.removeEventListener('change', changed);
-    } else {
-      const channel = open();
-      if (channel) channel.onmessage = changed;
-      off = () => channel?.close();
-    }
+    const channel = open();
+    store?.addEventListener('change', changed);
+    document.addEventListener('visibilitychange', shown);
+    if (channel) channel.onmessage = changed;
+    off = () => {
+      store?.removeEventListener('change', changed);
+      document.removeEventListener('visibilitychange', shown);
+      channel?.close();
+    };
   }
 };
 
