@@ -256,6 +256,46 @@ describe('reflection after changes', () => {
     off();
   });
 
+  describe('after the DOM moved without this handle (provider re-apply, other tab, server)', () => {
+    /** What another tab plus the provider's re-apply on `visibilitychange` leave behind. */
+    const external = (cookie: string, attr: string, value: string) => {
+      document.cookie = cookie;
+      html.setAttribute(attr, value);
+    };
+
+    it('reflects a toggle with no hook', () => {
+      const prefs = make();
+      prefs.sidebar.set((open) => !open); // this tab collapses
+      expect(html.getAttribute('data-sidebar')).toBe('false');
+      external('sidebar=true', 'data-sidebar', 'true'); // another tab expands
+      prefs.sidebar.set((open) => !open); // collapse again here
+      expect(prefs.sidebar.get()).toBe(false);
+      expect(html.getAttribute('data-sidebar')).toBe('false');
+    });
+
+    it('reflects set() of the value this handle saw last, with no subscriber', () => {
+      const prefs = make();
+      prefs.theme.set('dark');
+      external('theme=light', 'class', 'light');
+      prefs.theme.set('dark');
+      expect(html.className).toBe('is-dark');
+      prefs.theme.reset();
+      external('theme=dark', 'class', 'is-dark');
+      prefs.theme.reset();
+      expect(html.className).toBe('system');
+    });
+
+    it('reflects set() after the last subscriber unmounted', () => {
+      const prefs = make();
+      const off = prefs.pageSize.subscribe(() => {}); // sees 25
+      off();
+      document.cookie = 'pageSize=50';
+      html.style.setProperty('--page-size', '50');
+      prefs.pageSize.set(25);
+      expect(html.style.getPropertyValue('--page-size')).toBe('25');
+    });
+  });
+
   it('never throws on a value that is not a valid class', () => {
     const { t } = definePrefs({ t: pref.enum(['a b', 'c']).reflect('class') });
     expect(() => t.set('a b')).not.toThrow();
