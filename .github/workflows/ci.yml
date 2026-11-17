@@ -63,7 +63,7 @@ jobs:
   e2e:
     name: E2E on Next ${{ matrix.next }}
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
