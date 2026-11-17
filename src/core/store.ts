@@ -31,8 +31,10 @@ export const bind = (key: string, def: Def, prefix: string, options: CookieOptio
     Object.values({ ...(kind as object) }).some((c) => !/^[^\t\n\f\r ]+$/.test(c as string))
   )
     throw TypeError(`cookie-prefs: ${key}.reflect('class') needs non-empty classes without whitespace`);
-  // Parsed value per raw string, so reads are referentially stable. Bounded, since
-  // on the server raw strings come from arbitrary requests.
+  // Parsed value per raw string, so reads in the browser are referentially stable
+  // (`useSyncExternalStore`, hydration from a snapshot). Bounded. Without a DOM every
+  // read parses again: a json or custom value is an object that one request could
+  // mutate, and a cached one would be handed to the next request.
   const cache = new Map<string, unknown>();
   const listeners = new Set<(value: unknown) => void>();
   let last: unknown;
@@ -41,7 +43,7 @@ export const bind = (key: string, def: Def, prefix: string, options: CookieOptio
     try {
       const raw = rawOf(source, name);
       if (typeof raw == 'string' && raw.length <= 4096) {
-        if (!cache.has(raw)) {
+        if (!cache.has(raw) || typeof document == 'undefined') {
           if (cache.size > 9) cache.clear();
           cache.set(raw, def.p(raw));
         }

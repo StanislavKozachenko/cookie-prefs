@@ -189,7 +189,8 @@ export interface Pref<T, V = T> {
   readonly defaultValue: V;
   /**
    * Current value from `document.cookie`. Returns the default where there is no
-   * DOM; on the server use `read()` instead.
+   * DOM; on the server use `read()` instead. The same cookie returns the same object,
+   * shared with every other reader: treat json and custom values as read-only.
    */
   get(): V;
   /** Write the cookie in the browser and notify subscribers in this and other tabs. No-op on the server. */
@@ -206,7 +207,11 @@ export interface Pref<T, V = T> {
   subscribe(listener: (value: V) => void): () => void;
   /**
    * Read the value from request cookies (stores and maps hold URI-decoded values).
-   * Pure; never throws. Cached per raw string, so the same cookie returns the same object.
+   * Pure; never throws. In the browser, like `get()`, it is cached per raw string: the
+   * same cookie returns the same object to every caller. Without a DOM (on the server)
+   * every call parses again, so requests never share a parsed value. Treat json and
+   * custom values, and the `.default()` value (always returned as is), as read-only:
+   * copy them before changing anything.
    */
   read(source: CookieSource): V;
   /**

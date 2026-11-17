@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
+import * as z from 'zod';
 import { definePrefs, pref, prefsScript, readPrefs, snapshotPrefs } from '../../index';
 
 const prefs = definePrefs({
@@ -65,6 +66,24 @@ describe('without a DOM', () => {
     expect(prefs.theme.read('theme=dark')).toBe('dark');
     expect(readPrefs(prefs, 'theme=dark; locale=de')).toEqual({ theme: 'dark', locale: 'de' });
     expect(snapshotPrefs(prefs, 'theme=dark; other=1')).toEqual({ theme: 'dark' });
+  });
+
+  it('hands every request its own json and custom values', () => {
+    const shared = definePrefs({
+      columns: pref.json(z.array(z.string())).default([]),
+      since: pref.custom({ parse: (raw) => new Date(raw), serialize: (d: Date) => d.toISOString() }),
+    });
+    const header = 'columns=%5B%22a%22%5D; since=2026-01-01T00%3A00%3A00.000Z';
+    // request A mutates what it read, from the header and from a snapshot
+    const a = readPrefs(shared, header);
+    a.columns.push('leaked');
+    a.since!.setFullYear(1999);
+    (shared.columns.read(snapshotPrefs(shared, header)) as string[]).push('leaked');
+    // request B, with the same cookies
+    const b = readPrefs(shared, header);
+    expect(b).toEqual({ columns: ['a'], since: new Date('2026-01-01T00:00:00.000Z') });
+    expect(b.columns).not.toBe(a.columns);
+    expect(shared.columns.read({ columns: '["a"]' })).toEqual(['a']);
   });
 
   it('builds cookies and the inline script', () => {
