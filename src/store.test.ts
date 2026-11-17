@@ -247,6 +247,15 @@ describe('reflection after changes', () => {
     off();
   });
 
+  it('re-applies on the first subscribe even when the value is the one last seen', () => {
+    const prefs = make();
+    prefs.sidebar.set(false);
+    html.setAttribute('data-sidebar', 'true'); // e.g. React resetting <html> on remount
+    const off = prefs.sidebar.subscribe(() => {});
+    expect(html.getAttribute('data-sidebar')).toBe('false');
+    off();
+  });
+
   it('never throws on a value that is not a valid class', () => {
     const { t } = definePrefs({ t: pref.enum(['a b', 'c']).reflect('class') });
     expect(() => t.set('a b')).not.toThrow();
