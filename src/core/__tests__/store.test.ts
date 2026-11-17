@@ -237,6 +237,25 @@ describe('browser cookie attributes', () => {
         'bee=2; Path=/b; Domain=x.test; Max-Age=60; SameSite=strict; Secure; Partitioned',
       ]);
     });
+
+    it('and so does null from a JavaScript caller, outside the types', () => {
+      const writes = spyCookieWrites();
+      const nulls = Object.fromEntries(Object.keys(none).map((key) => [key, null])) as never;
+      const { a, b } = definePrefs(
+        {
+          a: pref.string(),
+          b: pref.string().options({ maxAge: 60 }).options({ ...(nulls as object), name: null } as never),
+        },
+        { ...(nulls as object), prefix: null } as never,
+      );
+      a.set('1');
+      b.set('2');
+      expect(writes).toEqual([
+        'a=1; Path=/; Max-Age=34560000; SameSite=lax',
+        'b=2; Path=/; Max-Age=60; SameSite=lax',
+      ]);
+      expect(a.toCookie('1')).toEqual({ name: 'a', value: '1', path: '/', maxAge: 34560000, sameSite: 'lax' });
+    });
   });
 });
 

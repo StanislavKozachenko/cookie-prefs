@@ -39,7 +39,7 @@ Clearing is `reset()`, never `set(undefined)`. `set()` and `reset()` do nothing 
 
 ## Cookie options and defaults
 
-`Path=/`, `SameSite=Lax`, `Max-Age` of 400 days (the cap browsers enforce; every write refreshes it), no `Domain`, and `Secure` added automatically on `https:` pages for browser writes. `toCookie()` omits `Secure` unless you set it. Change them for all prefs in `definePrefs(shape, options)` or per pref with `.options()`. `prefix: '__Host-'` opts into a cookie prefix and also needs `secure: true` and no `domain`.
+`Path=/`, `SameSite=Lax`, `Max-Age` of 400 days (the cap browsers enforce; every write refreshes it), no `Domain`, and `Secure` added automatically on `https:` pages for browser writes. `toCookie()` omits `Secure` unless you set it. Change them for all prefs in `definePrefs(shape, options)` or per pref with `.options()`. An option set to `undefined` (or `null` in JavaScript) counts as not set and falls through to the earlier `.options()`, then the `definePrefs` options, then the default, so a conditional such as `{ domain: isProd ? 'example.com' : undefined }` is safe. `prefix: '__Host-'` opts into a cookie prefix and also needs `secure: true` and no `domain`.
 
 ## `prefkit/react` outside Next.js
 
