@@ -2,7 +2,7 @@
 
 `prefkit/next`: `PrefsProvider` modes, refreshing server output, nonce and how request cookies are read. Back to the [README](../README.md).
 
-`prefkit/next` is a server-only entry for the App Router with two exports, `PrefsProvider` (an async Server Component) and `getPrefs`; see the Quick start in the README. Both read the request's raw `Cookie` header and parse it the way the browser parses `document.cookie` (the first of duplicate cookies wins, quotes are stripped), so the server never disagrees with what the inline script already put on `<html>`. A pref cookie set or deleted earlier in the same request is taken from `cookies()` instead, which is how a Server Action write shows up in its own response. A cookie written earlier in the same request (in a Server Action or in middleware) is visible to `getPrefs` and to `mode="server"` in that same response.
+`prefkit/next` is a server-only entry for the App Router with two exports, `PrefsProvider` (an async Server Component) and `getPrefs`; see the Quick start in the README. Both read the request's raw `Cookie` header and parse it the way the browser parses `document.cookie` (the first of duplicate cookies wins, quotes are stripped), so the server never disagrees with what the inline script already put on `<html>`. A pref cookie set or deleted earlier in the same request (in a Server Action or in middleware) is taken from `cookies()` instead, so `getPrefs` and `mode="server"` see it in that same response.
 
 ## Modes
 

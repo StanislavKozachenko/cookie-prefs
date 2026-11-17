@@ -92,7 +92,6 @@ export async function setLocale(locale: string) {
 }
 ```
 
-
 ## The entries
 
 | Import          | What it is                                                                                  | Guide |
