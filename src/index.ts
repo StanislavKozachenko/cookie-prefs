@@ -144,9 +144,9 @@ export const pref: PrefFactory = {
  * prefs.sidebar.set((open) => !open)
  */
 export function definePrefs<S extends PrefShape>(shape: S, options?: PrefsOptions): Prefs<S>;
-export function definePrefs(shape: PrefShape, { prefix = '', ...options }: PrefsOptions = {}) {
+export function definePrefs(shape: PrefShape, { prefix, ...options }: PrefsOptions = {}) {
   const prefs: Record<string, unknown> = {};
-  for (const key in shape) prefs[key] = bind(key, shape[key] as unknown as Def, prefix, options);
+  for (const key in shape) prefs[key] = bind(key, shape[key] as unknown as Def, prefix ?? '', options);
   return prefs as never;
 }
 
