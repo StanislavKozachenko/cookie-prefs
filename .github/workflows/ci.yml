@@ -81,6 +81,7 @@ jobs:
 
       - run: npm ci
       - run: npm ci --prefix e2e
+      - run: npm run typecheck --prefix e2e
 
       - name: Read the Playwright version
         id: playwright
