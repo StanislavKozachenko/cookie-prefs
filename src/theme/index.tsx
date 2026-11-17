@@ -125,7 +125,7 @@ const seen = new Set<string>();
  * provider re-writes an existing theme cookie: the choice lasts 7 days after the
  * last visit there, not after the last change. Only when `cookie.maxAge` is longer
  * than 7 days, so a shorter lifetime still ends on time. A cookie set by the server
- * (`Set-Cookie`, e.g. middleware) is not capped.
+ * (`Set-Cookie`, e.g. middleware) is not capped until the provider re-writes it.
  * @example
  * <html lang="en" suppressHydrationWarning>
  *   <body>

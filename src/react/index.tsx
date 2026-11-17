@@ -34,7 +34,8 @@ const seen = new WeakSet<object>();
  * pref whose `maxAge` is longer than 7 days is refreshed, so a short-lived one still
  * expires on time. A pref no hook uses is refreshed only by `set()`. A cookie set by
  * the server (`Set-Cookie`, e.g. middleware writing `pref.toCookie(value)`) is not
- * capped.
+ * capped, but this refresh re-writes it from the page, so that only helps a pref no
+ * hook reads.
  * @example
  * const [sidebar, setSidebar] = usePref(prefs.sidebar)
  * <button onClick={() => setSidebar((open) => !open)}>Toggle</button>
