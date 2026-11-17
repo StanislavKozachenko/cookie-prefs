@@ -49,8 +49,12 @@ export function DensityToggle() {
 }
 ```
 
+## Server writes and hooks
+
+A pref written on the server with `toCookie()` (a Server Action, middleware) is not announced to client hooks. Where the CookieStore API exists, the store receives its `change` event, re-reads `document.cookie`, and updates hooks and the `<html>` reflection. Elsewhere (Safari before 18.4, Firefox before 140) hooks and the reflection keep the old value until the page reloads, unless it re-renders with a new snapshot (`mode="server"`). When the UI must update immediately, also call the client `set()`.
+
 ## Nonce
 
-Pass a CSP nonce with `<PrefsProvider prefs={prefs} nonce={nonce}>`, for example from `(await headers()).get('x-nonce')`. See also [security and platform notes](security.md).
+Pass a CSP nonce with `<PrefsProvider prefs={prefs} nonce={nonce}>`, for example from `(await headers()).get('x-nonce') ?? undefined` (`get()` returns `string | null`, the prop takes `string | undefined`). See also [security and platform notes](security.md).
 
 Outside Next.js, see [Core and React guide](core.md).

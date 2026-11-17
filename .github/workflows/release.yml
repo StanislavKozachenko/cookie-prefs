@@ -109,11 +109,21 @@ jobs:
               content = f.read()
           with open('/tmp/changelog-entry.md', 'r') as f:
               entry = f.read()
-          idx = content.index('---\n') + 4
-          content = content[:idx] + '\n' + entry + content[idx:]
+          # Releases go below the "## [Unreleased]" section, which ends with its own
+          # "---" rule, and above older releases.
+          start = content.index('## [Unreleased]')
+          idx = content.index('\n---\n', start) + 5
+          content = content[:idx] + '\n' + entry.rstrip('\n') + '\n' + content[idx:]
           with open('CHANGELOG.md', 'w') as f:
               f.write(content)
           PYEOF
+
+      # Trusted publishing (OIDC) needs npm 11.5.1 or newer, which the npm bundled
+      # with the runner's Node.js may not be.
+      - name: Use an npm that supports trusted publishing
+        run: |
+          npm install -g npm@^11.5.1
+          npm --version
 
       # Irreversible public steps come last, publishing first: if it fails,
       # nothing public changed. On a re-run after a later step failed, the
@@ -125,7 +135,8 @@ jobs:
           if [ -n "$(npm view "prefkit@${VERSION}" version 2>/dev/null)" ]; then
             echo "prefkit@${VERSION} is already on npm, skipping publish"
           else
-            npm publish --provenance
+            # The checks and the build already ran above, so skip the prepublishOnly hook
+            npm publish --provenance --ignore-scripts
           fi
 
       # The commit is made through the API rather than pushed, so GitHub signs

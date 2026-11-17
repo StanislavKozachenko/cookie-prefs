@@ -50,6 +50,17 @@ The core must keep zero runtime dependencies and stay within the 2 KB gzip budge
 
 ## Releases
 
-Releases are published by the maintainer with the manual **Release** workflow (Actions, Release, Run workflow, pick patch / minor / major). It needs a `RELEASE_TOKEN` secret (contents write access) and npm publishing set up for the repository.
+Releases are published by the maintainer with the manual **Release** workflow (Actions, Release, Run workflow, pick patch / minor / major). It needs a `RELEASE_TOKEN` secret (contents write access) and npm trusted publishing set up for the repository (see below for the first release).
 
 The workflow checks and builds first, then publishes to npm, then commits the version bump and changelog to `main`, creates the tag and the GitHub release. If a step after the publish fails, fix the cause and re-run with the same bump: the publish is skipped when that version is already on npm. If the bump commit already landed, do not re-run; create the missing tag and release by hand.
+
+### First release
+
+Trusted publishing can only be configured for a package that already exists on npm, so 0.1.0 is published by hand. Later releases come from the workflow and carry a provenance attestation; the manually published 0.1.0 has none.
+
+1. Bump locally with `npm version 0.1.0 --no-git-tag-version` and do not commit it. A plain `npm version` would create a commit and a local tag, while the workflow creates the tag through the API.
+2. Run `npm run build`, then `npm pack --dry-run` and check that the listing includes `dist` (`dist` is gitignored and `npm pack` runs no build).
+3. Run `npm publish`. The `prepublishOnly` script lints, type-checks, builds, tests and checks the package first.
+4. Discard the local version change (`git checkout package.json package-lock.json`).
+5. On npmjs.com, open the package settings and configure the trusted publisher: this repository and the workflow file `release.yml`.
+6. Add the `RELEASE_TOKEN` secret, then run the Release workflow with `minor`. It computes 0.1.0, finds it on npm and skips publishing, commits the bump and the changelog, creates the tag and the GitHub release.

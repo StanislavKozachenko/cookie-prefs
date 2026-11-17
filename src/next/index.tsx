@@ -67,7 +67,7 @@ export interface NextPrefsProviderProps<P extends PrefsRecord> {
    * @default 'script'
    */
   mode?: 'script' | 'server' | undefined;
-  /** CSP nonce for the inline script, e.g. from `(await headers()).get('x-nonce')`. */
+  /** CSP nonce for the inline script, e.g. from `(await headers()).get('x-nonce') ?? undefined`. */
   nonce?: string | undefined;
   children?: ReactNode;
 }
