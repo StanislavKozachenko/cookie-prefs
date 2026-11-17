@@ -21,7 +21,7 @@ export const domOf = (kind: Kind | undefined, value: unknown): string | null =>
   value == null
     ? null
     : typeof kind == 'object'
-      ? (kind[String(value)] ?? null)
+      ? (kind[value as string] ?? null)
       : String(value);
 
 /**
@@ -56,14 +56,14 @@ export const apply = (targets: readonly string[], kind: Kind | undefined, s: str
  * `})("`: keep both in sync (parity test in `src/react/__tests__/reapply.test.ts`).
  */
 const SOURCE =
-  "(function(P){var d=document,h=d.documentElement,C='; '+d.cookie,i=0,j,p,m,v,n,t,k;" +
+  '(function(P){var h=document.documentElement,C="; "+document.cookie,i=0,j,p,m,v,n,t,k;' +
   'for(P=JSON.parse(P);p=P[i++];)try{m=p[2];v=C.split("; "+p[0]+"=")[1];' +
   'if(v!=null)try{v=decodeURIComponent(v.split(";")[0].replace(/^"(.*)"$/,"$1"));' +
   'if(m===1){n=parseFloat(v);v=n===+v&&isFinite(n)?""+n:null}' +
   'else if(m)v={}.hasOwnProperty.call(m,v)?m[v]:null}catch(e){v=null}' +
   'if(v==null)v=p[3];' +
   'for(j=0;t=p[1][j++];)if(t=="class"){for(k in m)h.classList.remove(m[k]);if(v!=null)h.classList.add(v)}' +
-  'else if(t.charAt(0)=="-"){if(v==null)h.style.removeProperty(t);else h.style.setProperty(t,v)}' +
+  'else if(t[0]=="-"){if(v==null)h.style.removeProperty(t);else h.style.setProperty(t,v)}' +
   'else if(v==null)h.removeAttribute(t);else h.setAttribute(t,v)}catch(e){}})(';
 
 /**
