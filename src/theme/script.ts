@@ -27,8 +27,8 @@ export const MEDIA = '(prefers-color-scheme: dark)';
  * test in `src/theme/__tests__/script.test.tsx`).
  */
 const SOURCE =
-  '(function(k,l,a,m,d,f,s,c){var D=document,h=D.documentElement,o={}.hasOwnProperty,x,i,j;' +
-  "if(!f){x=('; '+D.cookie).split('; '+k+'=')[1];" +
+  '(function(k,l,a,m,d,f,s,c){var h=document.documentElement,o={}.hasOwnProperty,x,i,j;' +
+  "if(!f){x=('; '+document.cookie).split('; '+k+'=')[1];" +
   "try{x=x!=null?decodeURIComponent(x.split(';')[0].replace(/^\"(.*)\"$/,'$1')):localStorage.getItem(l)}catch(e){x=null}" +
   'f=x!=null&&o.call(m,x)?x:d}' +
   "if(f=='system'&&s)f=matchMedia('" +
