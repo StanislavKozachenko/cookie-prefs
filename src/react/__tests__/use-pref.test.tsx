@@ -281,6 +281,51 @@ describe('usePref refresh against Safari’s 7-day cap on script-written cookies
     expect(columns.seen).toHaveLength(1);
   });
 
+  it('leaves an invalid or unknown value alone until set() replaces it', () => {
+    // Another subdomain sharing the cookie (`domain`) or a newer release knows `sepia`:
+    // it reads as the default here, which must not be written over it.
+    const prefs = make();
+    document.cookie = 'theme=sepia';
+    document.cookie = 'pageSize=lots';
+    const write = writes();
+    const theme = probe(prefs.theme);
+    const size = probe(prefs.pageSize);
+    const el = render(
+      <>
+        <theme.Probe />
+        <size.Probe />
+      </>,
+    );
+    expect(el.textContent).toBe('"system"25');
+    expect(write).not.toHaveBeenCalled();
+    expect(document.cookie).toBe('theme=sepia; pageSize=lots');
+    act(() => theme.last().set('dark'));
+    expect(document.cookie).toBe('theme=dark; pageSize=lots');
+  });
+
+  it('re-writes only a cookie that holds exactly the text it would write', () => {
+    const prefs = make();
+    // the same values in another spelling: left as stored
+    document.cookie = 'theme="dark"';
+    document.cookie = 'pageSize=5e1';
+    document.cookie = 'since=%61';
+    // as cookie-prefs writes them
+    document.cookie = 'locale=de%20AT';
+    document.cookie = 'columns=' + encodeURIComponent('["a b"]');
+    const write = writes();
+    const probes = [
+      probe(prefs.theme),
+      probe(prefs.pageSize),
+      probe(prefs.since),
+      probe(prefs.locale),
+      probe(prefs.columns),
+    ];
+    const el = render(probes.map(({ Probe }, i) => <Probe key={i} />));
+    expect(el.textContent).toBe('"dark"50{"raw":"a"}"de AT"["a b"]');
+    expect(write.mock.calls).toEqual([['locale=de%20AT' + attrs], ['columns=%5B%22a%20b%22%5D' + attrs]]);
+    expect(document.cookie).toContain('theme="dark"; pageSize=5e1; since=%61');
+  });
+
   it('does not write on the server', () => {
     const prefs = make();
     document.cookie = 'theme=dark';
