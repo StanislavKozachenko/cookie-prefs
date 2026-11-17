@@ -24,7 +24,7 @@ export const MEDIA = '(prefers-color-scheme: dark)';
  * then writes the class / attributes and `color-scheme` on `<html>`. Never built from
  * `Function.prototype.toString`, so minifiers and `keepNames` cannot break it
  * (next-themes #370). `paint` below is the client port: keep both in sync (parity
- * test in `src/theme/script.test.ts`).
+ * test in `src/theme/__tests__/script.test.tsx`).
  */
 const SOURCE =
   '(function(k,l,a,m,d,f,s,c){var D=document,h=D.documentElement,o={}.hasOwnProperty,x,i,j;' +

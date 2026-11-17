@@ -8,10 +8,10 @@ import { cookies, headers } from 'next/headers';
 import { RequestCookies } from 'next/dist/server/web/spec-extension/cookies';
 import { renderToString } from 'react-dom/server';
 import { afterEach, describe, expect, expectTypeOf, it, vi } from 'vitest';
-import { definePrefs, pref, prefsScript, type PrefsSnapshot } from '../index';
-import { PrefsProvider as ClientPrefsProvider, usePref } from '../react/index';
-import * as entry from './index';
-import { getPrefs, PrefsProvider } from './index';
+import { definePrefs, pref, prefsScript, type PrefsSnapshot } from '../../index';
+import { PrefsProvider as ClientPrefsProvider, usePref } from '../../react/index';
+import * as entry from '../index';
+import { getPrefs, PrefsProvider } from '../index';
 
 vi.mock('next/headers', () => ({ cookies: vi.fn(), headers: vi.fn() }));
 

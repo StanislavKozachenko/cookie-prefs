@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
-import { definePrefs, pref, prefsScript, readPrefs, snapshotPrefs } from './index';
+import { definePrefs, pref, prefsScript, readPrefs, snapshotPrefs } from '../../index';
 
 const prefs = definePrefs({
   theme: pref.enum(['light', 'dark']).default('light').reflect('class'),

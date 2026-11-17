@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as z from 'zod';
-import { definePrefs, pref } from './index';
+import { definePrefs, pref } from '../../index';
 
 const html = document.documentElement;
 

@@ -12,14 +12,14 @@ import {
   type PrefsSnapshot,
   type PrefValue,
   type PrefValues,
-} from './index';
+} from '../../index';
 import {
   getPrefs,
   PrefsProvider as NextPrefsProvider,
   type NextPrefsProviderProps,
-} from './next/index';
-import { PrefsProvider, usePref, type PrefSetter } from './react/index';
-import { ThemeProvider, useTheme, type ThemeProviderProps, type UseThemeProps } from './theme/index';
+} from '../../next/index';
+import { PrefsProvider, usePref, type PrefSetter } from '../../react/index';
+import { ThemeProvider, useTheme, type ThemeProviderProps, type UseThemeProps } from '../../theme/index';
 
 const prefs = definePrefs({
   theme: pref.enum(['light', 'dark', 'system']).default('system').reflect('class'),

@@ -1,7 +1,7 @@
 import { parse } from 'acorn';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as z from 'zod';
-import { definePrefs, pref, prefsScript, type PrefsRecord } from './index';
+import { definePrefs, pref, prefsScript, type PrefsRecord } from '../../index';
 
 const html = document.documentElement;
 

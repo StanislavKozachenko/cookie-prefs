@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { definePrefs, pref } from './index';
+import { definePrefs, pref } from '../../index';
 
 const clearCookies = () => {
   for (const pair of document.cookie.split('; '))
