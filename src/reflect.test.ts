@@ -160,11 +160,11 @@ describe('prefsScript', () => {
       expect(() => parse(prefsScript(prefs), { ecmaVersion: 5, sourceType: 'script' })).not.toThrow();
   });
 
-  it('is fixed code plus JSON config', () => {
+  it('is fixed code plus JSON config in a string literal', () => {
     const src = prefsScript(make());
-    expect(src).toMatch(/^\(function\(P\)\{.*\}catch\(e\)\{\}\}\)\(\[.*\]\)$/);
+    expect(src).toMatch(/^\(function\(P\)\{.*\}catch\(e\)\{\}\}\)\("\[.*\]"\)$/);
     expect(src).not.toContain('function ' + 'anonymous');
-    const config = JSON.parse(src.slice(src.indexOf('})([') + 3, -1)) as unknown[];
+    const config = JSON.parse(JSON.parse(src.slice(src.indexOf('})("') + 3, -1))) as unknown[];
     expect(config).toHaveLength(5);
     expect(config[0]).toEqual(['app.theme', ['class'], { light: 'light', dark: 'is-dark', system: 'system' }, 'system']);
   });
@@ -173,7 +173,8 @@ describe('prefsScript', () => {
     const prefs = makeHostile();
     const src = prefsScript(prefs);
     expect(src).not.toMatch(/[<>\u2028\u2029]/);
-    expect(src.slice(src.indexOf('})(['))).not.toContain('&');
+    expect(src.indexOf('})("')).toBeGreaterThan(0);
+    expect(src.slice(src.indexOf('})("'))).not.toContain('&');
     expect(src).toContain('\\u003c/script\\u003e');
 
     run(prefs);

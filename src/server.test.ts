@@ -69,6 +69,6 @@ describe('without a DOM', () => {
 
   it('builds cookies and the inline script', () => {
     expect(prefs.locale.toCookie('de')).toMatchObject({ name: 'locale', value: 'de' });
-    expect(prefsScript(prefs)).toContain('"theme"');
+    expect(prefsScript(prefs)).toContain('\\"theme\\"');
   });
 });

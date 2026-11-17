@@ -42,12 +42,14 @@ export const apply = (targets: readonly string[], kind: Kind | undefined, s: str
  * Fixed ES5 source of the pre-paint script, applied to a JSON array of `Reflection`.
  * Mirrors `rawOf` + the parsers + `apply`: decode, validate by kind, fall back to
  * the default, then write class / attribute / CSS variable on `<html>`.
+ * The config comes as a string literal and is `JSON.parse`d: as an object literal, an
+ * enum value named `__proto__` would set the prototype instead of adding a key.
  * `src/react/reapply.ts` ports it to DOM calls and finds the config after the only
- * `})(`: keep both in sync (parity test in `src/react/reapply.test.ts`).
+ * `})("`: keep both in sync (parity test in `src/react/reapply.test.ts`).
  */
 const SOURCE =
   "(function(P){var d=document,h=d.documentElement,C='; '+d.cookie,i=0,j,p,m,v,n,t,k;" +
-  'for(;p=P[i++];)try{m=p[2];v=C.split("; "+p[0]+"=")[1];' +
+  'for(P=JSON.parse(P);p=P[i++];)try{m=p[2];v=C.split("; "+p[0]+"=")[1];' +
   'if(v!=null)try{v=decodeURIComponent(v.split(";")[0].replace(/^"(.*)"$/,"$1"));' +
   'if(m===1){n=parseFloat(v);v=n===+v&&isFinite(n)?""+n:null}' +
   'else if(m)v={}.hasOwnProperty.call(m,v)?m[v]:null}catch(e){v=null}' +
@@ -56,11 +58,15 @@ const SOURCE =
   'else if(t.charAt(0)=="-"){if(v==null)h.style.removeProperty(t);else h.style.setProperty(t,v)}' +
   'else if(v==null)h.removeAttribute(t);else h.setAttribute(t,v)}catch(e){}})(';
 
-/** The inline script for these reflections, or `''` when there are none. */
+/**
+ * The inline script for these reflections, or `''` when there are none. The config is
+ * JSON in a JSON string literal (valid ES5 once U+2028/U+2029 are escaped), with `<`,
+ * `>` and `&` escaped so it is safe inside `<script>`.
+ */
 export const script = (config: Reflection[]): string =>
   config.length
     ? SOURCE +
-      JSON.stringify(config).replace(
+      JSON.stringify(JSON.stringify(config)).replace(
         /[<>&\u2028\u2029]/g,
         (c) => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'),
       ) +

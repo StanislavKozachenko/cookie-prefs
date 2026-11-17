@@ -189,18 +189,33 @@ describe('reapply', () => {
   });
 
   it('never throws, whatever the string', () => {
-    for (const s of ['', 'x', '})(', '})([', '})([1])', '})([null,[1],{"a":1}])', '})({"a":1})', '})([[1,null]])'])
+    for (const s of [
+      '',
+      'x',
+      '})(',
+      '})("',
+      '})("x")',
+      '})("[1]")',
+      '})("[null,[1],{\\"a\\":1}]")',
+      '})("{\\"a\\":1}")',
+      '})("[[1,null]]")',
+      '})([[1,null]])',
+    ])
       expect(() => reapply(s)).not.toThrow();
     expect(html.attributes).toHaveLength(0);
   });
 
-  it('finds the config right after the fixed source, even with `})([` in values', () => {
+  it('finds the config right after the fixed source, even with `})("` in values', () => {
     const plain = prefsScript(configs.plain!());
-    const src = prefsScript(configs['hostile strings']!());
-    const end = src.indexOf('})([') + 3;
-    // The fixed source is the same for every config and holds `})([` only at its end.
-    expect(src.slice(0, end)).toBe(plain.slice(0, plain.indexOf('})([') + 3));
-    expect(src.slice(end)).toContain('})([');
-    expect(JSON.parse(src.slice(end, -1))[0][3]).toBe(hostile);
+    const { z } = definePrefs({ z: pref.string().default('})("x")').reflect('data-z') });
+    const src = prefsScript({ ...configs['hostile strings']!(), z });
+    const end = src.indexOf('})("') + 3;
+    // The fixed source is the same for every config and holds `})("` only at its end;
+    // the string literal after it escapes every `"`.
+    expect(src.slice(0, end)).toBe(plain.slice(0, plain.indexOf('})("') + 3));
+    expect(src.slice(end)).toContain('})(');
+    const config = JSON.parse(JSON.parse(src.slice(end, -1)));
+    expect(config[0][3]).toBe(hostile);
+    expect(config.at(-1)[3]).toBe('})("x")');
   });
 });
