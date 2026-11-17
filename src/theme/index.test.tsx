@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { act, StrictMode, version, type ComponentType, type ReactNode } from 'react';
+import { act, Profiler, StrictMode, version, type ComponentType, type ReactNode } from 'react';
 import { createRoot, hydrateRoot, type Root } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -528,6 +528,70 @@ describe('next-themes migration', () => {
     } finally {
       Object.defineProperty(globalThis, 'localStorage', desc);
     }
+  });
+});
+
+describe('refresh against Safari’s 7-day cap on script-written cookies', () => {
+  // Refreshed cookie names are remembered for the page load (the module), so every
+  // test uses its own storageKey.
+  const writes = () => vi.spyOn(Document.prototype, 'cookie', 'set');
+  /** The provider in a Profiler: `commits` counts every render committed below it. */
+  const profiled = (props: ThemeProviderProps) => {
+    const commits = vi.fn();
+    const node = (
+      <StrictMode>
+        <Profiler id="theme" onRender={commits}>
+          {app(props)}
+        </Profiler>
+      </StrictMode>
+    );
+    return { node, commits };
+  };
+
+  it('re-writes an existing cookie once per page load, without a re-render', () => {
+    const control = profiled({ storageKey: 'r0' }); // no cookie: nothing to refresh
+    render(control.node);
+    act(() => root!.unmount());
+    document.cookie = 'r1=dark';
+    const write = writes();
+    const { node, commits } = profiled({ storageKey: 'r1' });
+    render(node);
+    expect(write).toHaveBeenCalledTimes(1);
+    expect(write).toHaveBeenCalledWith('r1=dark; Path=/; Max-Age=34560000; SameSite=lax');
+    expect(current.theme).toBe('dark');
+    expect(commits).toHaveBeenCalledTimes(control.commits.mock.calls.length);
+    act(() => root!.unmount());
+    render(profiled({ storageKey: 'r1', attribute: 'class' }).node); // same page load
+    expect(write).toHaveBeenCalledTimes(1);
+    set('light');
+    expect(write).toHaveBeenCalledTimes(2);
+  });
+
+  it('re-writes an existing cookie once after hydration, without errors', async () => {
+    document.cookie = 'r2=dark';
+    const node = <StrictMode>{app({ storageKey: 'r2' })}</StrictMode>;
+    const markup = serve(node);
+    const write = writes();
+    const { errors, recoverable } = await hydrate(node, markup);
+    expect(write).toHaveBeenCalledTimes(1);
+    expect(write).toHaveBeenCalledWith('r2=dark; Path=/; Max-Age=34560000; SameSite=lax');
+    expect(current.theme).toBe('dark');
+    expect(errors).not.toHaveBeenCalled();
+    expect(recoverable).not.toHaveBeenCalled();
+  });
+
+  it('never creates a missing cookie', () => {
+    const write = writes();
+    render(app({ storageKey: 'r3' }));
+    expect(write).not.toHaveBeenCalled();
+    expect(document.cookie).toBe('');
+  });
+
+  it('does not write on the server', () => {
+    document.cookie = 'r4=dark';
+    const write = writes();
+    ssr(app({ storageKey: 'r4' }));
+    expect(write).not.toHaveBeenCalled();
   });
 });
 

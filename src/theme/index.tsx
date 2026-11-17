@@ -112,11 +112,19 @@ const none = () => undefined;
 /** Whether `document.cookie` holds a cookie of this (encoded) name, valid or not. */
 const exists = (name: string) => ('; ' + document.cookie).indexOf('; ' + name + '=') >= 0;
 
+/** Theme cookie names already checked for a refresh in this page load. */
+const seen = new Set<string>();
+
 /**
  * Drop-in replacement for next-themes `ThemeProvider`, stored in a cookie so the
  * server can read it. Migration is an import swap. Its inline script never triggers
  * the React 19 script warning and needs no `cookies()` read, so pages stay static.
  * Add `suppressHydrationWarning` to `<html>`.
+ *
+ * Safari caps cookies written by scripts at 7 days, so once per page load the
+ * provider re-writes an existing theme cookie: the choice lasts 7 days after the
+ * last visit there, not after the last change. A cookie set by the server
+ * (`Set-Cookie`, e.g. middleware) is not capped.
  * @example
  * <html lang="en" suppressHydrationWarning>
  *   <body>
@@ -194,10 +202,12 @@ function Theme({
   // (Strict Mode), and on every change. It reads the current cookie, never rendered
   // state, so re-running on an <Activity> reveal cannot bring an old theme back.
   useLayout(() => {
-    // One-time move from next-themes: no cookie yet, a valid name in localStorage. The
-    // value is removed once the cookie holds it (or when it is invalid), so a later
-    // missing cookie never brings it back. Otherwise this is a string search.
+    const once = !seen.has(handle.name);
+    seen.add(handle.name);
     try {
+      // One-time move from next-themes: no cookie yet, a valid name in localStorage. The
+      // value is removed once the cookie holds it (or when it is invalid), so a later
+      // missing cookie never brings it back.
       if (!exists(handle.name)) {
         const stored = localStorage.getItem(config[1]);
         if (stored != null) {
@@ -207,8 +217,11 @@ function Theme({
           if (!valid || exists(handle.name)) localStorage.removeItem(config[1]);
         }
       }
+      // Safari caps script-written cookies at 7 days: re-write an existing cookie once
+      // per page load, so the window slides with visits. Same value: no notification.
+      else if (once) handle.set(handle.get());
     } catch {
-      // storage unavailable: keep the default
+      // storage or cookies unavailable: keep the default
     }
     const resume = disableTransitionOnChange && pauseTransitions(nonce);
     paint(config, handle.get());
