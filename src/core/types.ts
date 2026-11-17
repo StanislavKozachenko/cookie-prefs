@@ -4,24 +4,26 @@ export type CookieSameSite = 'lax' | 'strict' | 'none';
 /**
  * Cookie attributes for pref cookies. Prefs are never `HttpOnly`: the browser must
  * read and write them, so they are visible to any script on the page. Never store
- * secrets or session data in a pref.
+ * secrets or session data in a pref. An option set to `undefined` counts as not set, so
+ * the value comes from the level below: an earlier `.options()` call, the `definePrefs()`
+ * options, then the default.
  */
 export interface CookieOptions {
   /** @default '/' */
-  path?: string;
+  path?: string | undefined;
   /** Omitted by default, which scopes the cookie to the current host. */
-  domain?: string;
+  domain?: string | undefined;
   /** Lifetime in seconds. Browsers cap it at 400 days. @default 34560000 (400 days) */
-  maxAge?: number;
+  maxAge?: number | undefined;
   /** @default 'lax' */
-  sameSite?: CookieSameSite;
+  sameSite?: CookieSameSite | undefined;
   /**
    * Send only over HTTPS. When unset, browser writes add `Secure` on `https:` pages
    * and `toCookie()` omits it.
    */
-  secure?: boolean;
+  secure?: boolean | undefined;
   /** CHIPS partitioned cookie. @default false */
-  partitioned?: boolean;
+  partitioned?: boolean | undefined;
 }
 
 /** Options for a whole set of prefs, passed to `definePrefs()`. */
@@ -32,13 +34,13 @@ export interface PrefsOptions extends CookieOptions {
    * `secure: true` and no `domain`).
    * @default ''
    */
-  prefix?: string;
+  prefix?: string | undefined;
 }
 
 /** Options for a single pref, passed to `.options()`. They override `PrefsOptions`. */
 export interface PrefOptions extends CookieOptions {
   /** Full cookie name for this pref. `prefix` is not applied to it. @default prefix + key */
-  name?: string;
+  name?: string | undefined;
 }
 
 /**
