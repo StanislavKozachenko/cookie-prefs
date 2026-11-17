@@ -206,7 +206,10 @@ export interface Pref<T, V = T> {
    * Listeners run synchronously, in subscription order. A listener that throws does not
    * stop the others and never makes `set()` or `reset()` throw: its error is thrown
    * again from a `setTimeout` callback, so it reaches the global error handler
-   * (`window.onerror`, error monitoring) instead of being swallowed.
+   * (`window.onerror`, error monitoring) instead of being swallowed. A listener that
+   * writes the pref notifies everyone of the new value at once; the rest of the older
+   * round is skipped. Listeners are a set: the same function subscribed twice is called
+   * once per change and removed by the first unsubscribe.
    */
   subscribe(listener: (value: V) => void): () => void;
   /**
