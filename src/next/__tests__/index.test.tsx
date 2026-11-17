@@ -2,7 +2,7 @@ import {
   createRequestStore,
   synchronizeMutableCookies,
 } from 'next/dist/server/async-storage/request-store';
-import { cookies, headers } from 'next/headers';
+import { cookies, headers } from 'next/headers.js';
 // The store class behind `cookies()`: next/dist/server/async-storage/request-store.js
 // builds it from the same request headers.
 import { RequestCookies } from 'next/dist/server/web/spec-extension/cookies';
@@ -13,7 +13,7 @@ import { PrefsProvider as ClientPrefsProvider, usePref } from '../../react/index
 import * as entry from '../index';
 import { getPrefs, PrefsProvider } from '../index';
 
-vi.mock('next/headers', () => ({ cookies: vi.fn(), headers: vi.fn() }));
+vi.mock('next/headers.js', () => ({ cookies: vi.fn(), headers: vi.fn() }));
 
 /**
  * Mock `headers()` and `cookies()` with the request store the installed Next builds
