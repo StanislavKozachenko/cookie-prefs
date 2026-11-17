@@ -83,13 +83,16 @@ export const bind = (key: string, def: Def, prefix: string, options: CookieOptio
     if (!Object.is(value, last)) {
       last = value;
       listeners.forEach((listener) => {
-        try {
-          listener(value);
-        } catch (e) {
-          setTimeout(() => {
-            throw e;
-          });
-        }
+        // Once a listener has written the pref, the nested check delivered the newer
+        // value to everyone: skip this outdated one.
+        if (Object.is(value, last))
+          try {
+            listener(value);
+          } catch (e) {
+            setTimeout(() => {
+              throw e;
+            });
+          }
       });
     }
   };

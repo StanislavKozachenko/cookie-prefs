@@ -73,3 +73,18 @@ it('a throwing listener does not stop the cross-tab re-check of other prefs', ()
     vi.unstubAllGlobals();
   }
 });
+
+it('a listener that writes the pref leaves no later listener on an outdated value', () => {
+  const { theme } = definePrefs({ theme: pref.enum(['light', 'dark', 'system']).default('system') });
+  const seen: string[] = [];
+  const off1 = theme.subscribe((value) => {
+    if (value == 'dark') theme.set('light'); // a guard: "dark is not allowed here"
+  });
+  const off2 = theme.subscribe((value) => seen.push(value));
+  theme.set('dark');
+  expect(theme.get()).toBe('light');
+  // the nested write delivered 'light' to everyone; the outer 'dark' is skipped
+  expect(seen).toEqual(['light']);
+  off1();
+  off2();
+});
