@@ -18,8 +18,8 @@ export type Config = [
 export const MEDIA = '(prefers-color-scheme: dark)';
 
 /**
- * Fixed ES5 source of the pre-paint script, called with the `Config` items as
- * arguments. Reads the cookie (or, when it is absent, a next-themes value in
+ * Fixed ES5 source of the pre-paint script, ending in `.apply(0,`: the `Config` items
+ * follow as arguments. Reads the cookie (or, when it is absent, a next-themes value in
  * `localStorage`), validates it, falls back to the default, resolves `'system'`,
  * then writes the class / attributes and `color-scheme` on `<html>`. Never built from
  * `Function.prototype.toString`, so minifiers and `keepNames` cannot break it
@@ -37,7 +37,7 @@ const SOURCE =
   'x={}.hasOwnProperty.call(m,f)?m[f]:f;' +
   "for(i=0;i<a.length;i++)try{if(a[i]=='class'){for(j in m)h.classList.remove(m[j]);h.classList.add(x)}" +
   'else h.setAttribute(a[i],x)}catch(e){}' +
-  'if(c!=null)h.style.colorScheme=/^(light|dark)$/.test(f)?f:c})';
+  'if(c!=null)h.style.colorScheme=/^(light|dark)$/.test(f)?f:c}).apply(0,';
 
 /**
  * The inline script for a config: fixed code plus the config as JSON, with `<`, `>`,
@@ -46,7 +46,6 @@ const SOURCE =
  */
 export const themeScript = (config: Config): string =>
   SOURCE +
-  '.apply(0,' +
   JSON.stringify(config).replace(
     /[<>&\u2028\u2029]/g,
     (c) => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'),
