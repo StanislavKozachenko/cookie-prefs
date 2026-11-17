@@ -17,7 +17,7 @@ export default defineConfig({
   treeshake: true,
   // Entries import each other by package name, so core state and the client
   // boundary exist once instead of being copied into every entry.
-  external: ['react', 'next', 'prefkit'],
+  external: ['react', 'next', 'cookie-prefs'],
   // Added after the build: tree shaking strips module-level directives, including a
   // `banner`, and one config keeps `clean` free of races between parallel builds.
   onSuccess: async () => {

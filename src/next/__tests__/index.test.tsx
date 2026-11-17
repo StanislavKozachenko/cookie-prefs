@@ -253,7 +253,7 @@ describe('the cookies() store of the installed next', () => {
     expect((await cookies()).get('locale')?.value).toBe('');
   });
 
-  it('disagrees with what prefkit reads from the header', async () => {
+  it('disagrees with what cookie-prefs reads from the header', async () => {
     const prefs = make();
     await request(header);
     expect(await getPrefs(prefs)).toMatchObject({ theme: 'light', locale: 'de' });
@@ -264,7 +264,7 @@ describe('the cookies() store of the installed next', () => {
 
 describe('imports', () => {
   // next has no `exports` map, so plain Node ESM (and vitest in a consumer project,
-  // where prefkit is not bundled) only resolves its subpaths with the file extension.
+  // where cookie-prefs is not bundled) only resolves its subpaths with the file extension.
   it('imports next/headers.js, with the extension', () => {
     const source = readFileSync('src/next/index.tsx', 'utf8');
     expect(source.match(/from '(next\/[^']*)'/g)).toEqual(["from 'next/headers.js'"]);

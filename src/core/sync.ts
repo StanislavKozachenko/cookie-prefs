@@ -5,7 +5,7 @@
  * changed, which also drops the echo of this tab's own writes.
  */
 
-const CHANNEL = 'prefkit';
+const CHANNEL = 'cookie-prefs';
 
 /** Re-check functions of prefs that have at least one listener. */
 const subs = new Set<() => void>();

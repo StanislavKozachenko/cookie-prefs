@@ -661,7 +661,7 @@ describe('other tabs', () => {
     expect(html.className).toBe('light');
     act(() => {
       document.cookie = 'theme=dark'; // the other tab's write
-      new Channel('prefkit').postMessage(0);
+      new Channel('cookie-prefs').postMessage(0);
     });
     expect(current.theme).toBe('dark');
     expect(html.className).toBe('dark');

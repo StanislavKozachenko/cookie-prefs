@@ -7,8 +7,8 @@ export default defineConfig({
   resolve: {
     // Entries import each other by package name; tests run them from source.
     alias: [
-      { find: /^prefkit$/, replacement: src('index.ts') },
-      { find: /^prefkit\/react$/, replacement: src('react/index.tsx') },
+      { find: /^cookie-prefs$/, replacement: src('index.ts') },
+      { find: /^cookie-prefs\/react$/, replacement: src('react/index.tsx') },
     ],
   },
   test: {

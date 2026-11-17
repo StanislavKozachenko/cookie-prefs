@@ -1,4 +1,4 @@
-import { definePrefs, pref, type CookieOptions } from 'prefkit';
+import { definePrefs, pref, type CookieOptions } from 'cookie-prefs';
 import {
   createContext,
   useContext,
