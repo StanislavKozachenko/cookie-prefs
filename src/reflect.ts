@@ -19,22 +19,25 @@ export const domOf = (kind: Kind | undefined, value: unknown): string | null =>
       ? (kind[String(value)] ?? null)
       : String(value);
 
-/** Mirror a DOM string on `<html>`, like the inline script does. Never throws. */
+/**
+ * Mirror a DOM string on `<html>` step by step like the inline script, including its
+ * one `try` per pref: an invalid class or attribute name stops the targets after it.
+ * Never throws.
+ */
 export const apply = (targets: readonly string[], kind: Kind | undefined, s: string | null) => {
   const h = document.documentElement;
-  for (const t of targets) {
-    try {
+  try {
+    for (const t of targets)
       if (t == 'class') {
-        for (const c of Object.values(kind as object) as string[]) h.classList.remove(c);
+        for (const k in kind as object) h.classList.remove((kind as Record<string, string>)[k]!);
         if (s != null) h.classList.add(s);
       } else if (t[0] == '-') {
         if (s == null) h.style.removeProperty(t);
         else h.style.setProperty(t, s);
       } else if (s == null) h.removeAttribute(t);
       else h.setAttribute(t, s);
-    } catch {
-      // invalid class or attribute name: leave the DOM as is
-    }
+  } catch {
+    // like the script: leave the rest of this pref as is
   }
 };
 
