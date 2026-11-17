@@ -59,10 +59,10 @@ export const apply = (targets: readonly string[], kind: Kind | undefined, s: str
  * code as one run: keep them, and check the minified `apply` when either changes.
  */
 const SOURCE =
-  '(function(P){var r=document.documentElement,C="; "+document.cookie,k=0,j,p,t,n,c,i,e;' +
+  '(function(P){var r=document.documentElement,C="; "+document.cookie,k=0,j,p,t,n,i,e;' +
   'for(P=JSON.parse(P);p=P[k++];)try{t=p[2];n=C.split("; "+p[0]+"=")[1];' +
   'if(n!=null)try{n=decodeURIComponent(n.split(";")[0].replace(/^"(.*)"$/,"$1"));' +
-  'if(t===1){c=parseFloat(n);n=c===+n&&isFinite(c)?""+c:null}' +
+  'if(t===1){t=parseFloat(n);n=t===+n&&isFinite(t)?""+t:null}' +
   'else if(t)n={}.hasOwnProperty.call(t,n)?t[n]:null}catch(e){n=null}' +
   'if(n==null)n=p[3];' +
   'for(j=0;i=p[1][j++];)if(i=="class"){for(e in t)r.classList.remove(t[e]);n!=null&&r.classList.add(n)}' +
