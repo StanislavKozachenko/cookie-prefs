@@ -118,6 +118,13 @@ jobs:
               f.write(content)
           PYEOF
 
+      # Trusted publishing (OIDC) needs npm 11.5.1 or newer, which the npm bundled
+      # with the runner's Node.js may not be.
+      - name: Use an npm that supports trusted publishing
+        run: |
+          npm install -g npm@^11.5.1
+          npm --version
+
       # Irreversible public steps come last, publishing first: if it fails,
       # nothing public changed. On a re-run after a later step failed, the
       # version is already on npm and publishing is skipped.
