@@ -60,7 +60,7 @@ const random = (seed: number) => () => {
 };
 
 describe('without same-request writes, the server reads exactly the header', () => {
-  const names = ['theme', 'sidebar', 'locale', 'the', 'my%20size', 'xtheme', 'theme2', 'Theme', 'my size', ' theme', 'theme ', ''];
+  const names = ['theme', 'sidebar', 'locale', 'the', 'my%20size', 'xtheme', 'theme2', 'Theme', 'my size', ' theme', 'theme ', '\u00a0theme', ''];
   const values = [
     'dark',
     'light',
@@ -80,6 +80,9 @@ describe('without same-request writes, the server reads exactly the header', () 
     'de+AT',
     ' dark',
     'dark ',
+    '\u00a0dark',
+    'dark\u2028',
+    '\ufeffdark',
     '1e3',
     '12',
     '__proto__',

@@ -9,14 +9,13 @@ import type { CookieGetter, CookieInit, CookieOptions, CookieSource } from './ty
 export const rawOf = (source: CookieSource, name: string): string | undefined => {
   if (typeof source == 'string') {
     for (const part of source.split(';')) {
-      const i = part.indexOf('=');
-      if (i > 0 && part.slice(0, i).trim() == name)
-        return decodeURIComponent(
-          part
-            .slice(i + 1)
-            .trim()
-            .replace(/^"(.*)"$/, '$1'),
-        );
+      // Name, `=` and value of one pair. Like browsers, only spaces and tabs around the
+      // name and the value are dropped, never other whitespace (U+00A0, U+2028, U+FEFF),
+      // so a header reads like `document.cookie` in the client, the inline script and
+      // `reapply`. Every group may be empty, so the match never fails and never
+      // backtracks over a long run of spaces: linear in the length of the part.
+      const m = /^[\t ]*((?:[\t ]*[^\t =]+)*)[\t ]*(=?)[\t ]*((?:[\t ]*[^\t ]+)*)/.exec(part)!;
+      if (m[2] && m[1] == name) return decodeURIComponent(m[3]!.replace(/^"(.*)"$/, '$1'));
     }
     return;
   }

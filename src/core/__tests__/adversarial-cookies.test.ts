@@ -60,8 +60,9 @@ const make = () =>
   });
 
 /**
- * Raw cookie values a browser can hold: no `;`, no control characters, no whitespace
- * at either end (browsers strip spaces and tabs; non-ASCII whitespace is left out here).
+ * Raw cookie values a browser can hold: no `;`, no control characters, no spaces or
+ * tabs at either end (browsers strip those). Other whitespace stays: a server or a
+ * sibling subdomain can set a value that starts or ends with U+00A0, U+2028 or U+FEFF.
  */
 const hostileValues = [
   'light',
@@ -135,6 +136,14 @@ const hostileValues = [
   '</script>',
   'a\u2028b',
   '%E2%80%A8',
+  '\u00a0dark',
+  'dark\u00a0',
+  'dark\u2028',
+  '\u2029true',
+  '\ufeffdark',
+  '\u3000x',
+  '25\u00a0',
+  '\u00a05',
   '😀',
   '%F0%9F%98%80',
   'x'.repeat(4000),
@@ -155,6 +164,9 @@ const hostileNames = [
   'themes',
   'app.theme',
   'the%6De',
+  '\u00a0theme',
+  'theme\ufeff',
+  '\u2028sidebar',
   '__proto__',
   'constructor',
   'toString',
@@ -221,6 +233,24 @@ describe('every read path agrees on hostile cookie strings', () => {
       expect(readPrefs(prefs, snapshot), label).toEqual(values);
       expect(JSON.parse(JSON.stringify(snapshot)), label).toEqual(snapshot);
     }
+  });
+
+  it.each([
+    ['value with a no-break space', 'theme=\u00a0dark'],
+    ['value with a line separator', 'theme=dark\u2028'],
+    ['value with a BOM', 'theme=\ufeffdark'],
+    ['name with a no-break space', '\u00a0theme=dark'],
+  ])('only spaces and tabs are trimmed, on every path: %s', (_, cookie) => {
+    const prefs = definePrefs({ theme: pref.enum(['light', 'dark']).default('light').reflect('data-theme') });
+    fakeCookie(cookie);
+    expect(scriptState(prefs).attrs).toEqual({ 'data-theme': 'light' });
+    expect(reapplyState(prefs)).toEqual(scriptState(prefs));
+    expect(storeState(prefs)).toEqual(scriptState(prefs));
+    expect(prefs.theme.get()).toBe('light');
+    expect(readPrefs(prefs, cookie)).toEqual({ theme: 'light' });
+    expect(readPrefs(prefs, snapshotPrefs(prefs, cookie))).toEqual({ theme: 'light' });
+    // spaces and tabs, which browsers never leave in `document.cookie`, are trimmed on the server
+    expect(readPrefs(prefs, ' \t theme \t= \t dark \t;')).toEqual({ theme: 'dark' });
   });
 
   it('a nameless cookie that looks like `name=value` is that cookie on every path', () => {
