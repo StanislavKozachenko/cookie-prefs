@@ -11,7 +11,12 @@ export type Reflection = [
   fallback: string | null,
 ];
 
-/** DOM string of a parsed value; `null` when there is none. */
+/**
+ * DOM string of a parsed value; `null` when there is none. For string and number
+ * prefs it is the cookie's text as is: reflecting a free-form `pref.string()` lets
+ * whoever can set the cookie (another subdomain, the user) choose that attribute or
+ * CSS variable value, so reflect only values you would accept from them.
+ */
 export const domOf = (kind: Kind | undefined, value: unknown): string | null =>
   value == null
     ? null
