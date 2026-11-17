@@ -71,6 +71,15 @@ const configs: Record<string, () => PrefsRecord> = {
         .reflect(['class', 'data-x', '--x'], { b: '<!-- &   -->', ['__proto__']: 'proto' }),
       y: pref.string().default(hostile).reflect(['data-y', '--y']),
     }),
+  // Unmasked: no hostile class aborts the pref before `__proto__` is looked up.
+  '__proto__ enum values': () =>
+    definePrefs({
+      p: pref.enum(['a', '__proto__']).default('a').reflect(['data-p', '--p']),
+      q: pref
+        .enum(['__proto__', 'b'])
+        .default('__proto__')
+        .reflect(['data-q', 'class'], { ['__proto__']: 'proto' }),
+    }),
   'one bad pref': () =>
     definePrefs({
       bad: pref.enum(['a b', 'c']).default('a b').reflect(['data-bad-before', 'class', 'data-bad-after']),

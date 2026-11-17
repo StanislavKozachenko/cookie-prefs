@@ -125,6 +125,24 @@ describe('prefsScript', () => {
     }
   });
 
+  it('reads an enum value named __proto__ like the client', () => {
+    const prefs = definePrefs({
+      x: pref.enum(['a', '__proto__']).default('a').reflect(['data-x', 'class'], { ['__proto__']: 'proto' }),
+    });
+    for (const cookie of ['x=__proto__', 'x=a', 'x=constructor']) {
+      document.cookie = cookie;
+      resetHtml();
+      run(prefs);
+      const fromScript = state();
+      resetHtml();
+      prefs.x.subscribe(() => {})();
+      expect(state(), cookie).toEqual(fromScript);
+    }
+    document.cookie = 'x=__proto__';
+    run(prefs);
+    expect(state()).toEqual({ class: 'proto', attrs: { class: 'proto', 'data-x': 'proto' } });
+  });
+
   it('strips quotes and takes the first duplicate, like the server', () => {
     document.cookie = 'app.locale="fr"';
     run(make());
