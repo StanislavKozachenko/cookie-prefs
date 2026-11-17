@@ -367,4 +367,16 @@ describe('reflection after changes', () => {
     expect(() => u.set('a')).not.toThrow();
     expect(u.get()).toBe('a');
   });
+
+  it('rejects empty classes and classes with whitespace in development', () => {
+    const define = (map: Record<string, string>) => () =>
+      definePrefs({ t: pref.enum(['a', 'b']).reflect(['data-t', 'class'], map) });
+    for (const bad of ['', 'x y', 'x\ty', 'x\n', ' '])
+      expect(define({ a: bad }), JSON.stringify(bad)).toThrow(/t\.reflect\('class'\)/);
+    expect(() => definePrefs({ t: pref.enum(['a b', 'c']).reflect('class') })).toThrow(TypeError);
+    // other targets take any string; valid classes pass
+    expect(() => definePrefs({ t: pref.enum(['a b', '']).reflect(['data-t', '--t']) })).not.toThrow();
+    expect(define({ a: 'x-y', b: 'é ' })).not.toThrow();
+    expect(() => definePrefs({ t: pref.boolean().reflect('data-t') })).not.toThrow();
+  });
 });
