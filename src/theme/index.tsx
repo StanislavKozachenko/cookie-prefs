@@ -15,7 +15,7 @@ import {
   type ScriptHTMLAttributes,
   type SetStateAction,
 } from 'react';
-import { has, LIGHT_DARK, media, paint, pauseTransitions, system, themeScript, type Config } from './script';
+import { LIGHT_DARK, media, paint, pauseTransitions, system, themeScript, type Config } from './script';
 
 /** `class` or any `data-*` attribute on `<html>`. */
 export type Attribute = `data-${string}` | 'class';
@@ -189,8 +189,9 @@ function Theme({
     }).theme;
     const setTheme: UseThemeProps['setTheme'] = (next) => {
       const name = typeof next == 'function' ? next(handle.get()) : next;
-      // A name outside the list would read back as the default: keep the stored one.
-      if (has(dom, name)) handle.set(name);
+      // A name outside the list would read back as the default: keep the stored one. Own
+      // keys only: theme names may be `__proto__` or `toString`.
+      if (({}).hasOwnProperty.call(dom, name)) handle.set(name);
     };
     return [handle, fresh, listed, setTheme] as const;
   }, [script, JSON.stringify(cookie)]);
@@ -215,7 +216,7 @@ function Theme({
       if (!exists(handle.name)) {
         const stored = localStorage.getItem(config[1]);
         if (stored != null) {
-          const valid = has(config[3], stored);
+          const valid = ({}).hasOwnProperty.call(config[3], stored);
           if (valid) handle.set(stored);
           // Kept when the write did not stick (cookies blocked): nothing is lost.
           if (!valid || exists(handle.name)) localStorage.removeItem(config[1]);

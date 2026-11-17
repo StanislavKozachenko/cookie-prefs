@@ -52,9 +52,6 @@ export const themeScript = (config: Config): string =>
   ) +
   ')';
 
-/** Own key check; theme names are user input and may be `__proto__` or `toString`. */
-export const has = (map: object, key: string) => ({}).hasOwnProperty.call(map, key);
-
 /** The `prefers-color-scheme` query; `undefined` where `matchMedia` is missing (jsdom). */
 export const media = () => globalThis.matchMedia?.(MEDIA);
 
@@ -72,7 +69,8 @@ export const paint = ([, , attributes, dom, , forced, enableSystem, colorScheme]
   const h = document.documentElement;
   let t = forced || theme;
   if (t == 'system' && enableSystem) t = system();
-  const name = has(dom, t) ? dom[t]! : t;
+  // Own keys only, like the script: theme names may be `__proto__` or `toString`.
+  const name = ({}).hasOwnProperty.call(dom, t) ? dom[t]! : t;
   for (const attribute of attributes)
     try {
       if (attribute == 'class') {
