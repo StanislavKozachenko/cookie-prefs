@@ -54,16 +54,18 @@ export const apply = (targets: readonly string[], kind: Kind | undefined, s: str
  * enum value named `__proto__` would set the prototype instead of adding a key.
  * `src/react/reapply.ts` ports it to DOM calls and finds the config after the only
  * `})("`: keep both in sync (parity test in `src/react/__tests__/reapply.test.ts`).
+ * `r`, `t` and `n` (`<html>`, value map, DOM string) are the names minifiers give the
+ * same values in `apply`, so gzip finds the repeated DOM code: keep them.
  */
 const SOURCE =
-  '(function(P){var h=document.documentElement,C="; "+document.cookie,i=0,j,p,m,v,n,t,k;' +
-  'for(P=JSON.parse(P);p=P[i++];)try{m=p[2];v=C.split("; "+p[0]+"=")[1];' +
-  'if(v!=null)try{v=decodeURIComponent(v.split(";")[0].replace(/^"(.*)"$/,"$1"));' +
-  'if(m===1){n=parseFloat(v);v=n===+v&&isFinite(n)?""+n:null}' +
-  'else if(m)v={}.hasOwnProperty.call(m,v)?m[v]:null}catch(e){v=null}' +
-  'if(v==null)v=p[3];' +
-  'for(j=0;t=p[1][j++];)if(t=="class"){for(k in m)h.classList.remove(m[k]);v!=null&&h.classList.add(v)}' +
-  'else t[0]=="-"?v==null?h.style.removeProperty(t):h.style.setProperty(t,v):v==null?h.removeAttribute(t):h.setAttribute(t,v)}catch(e){}})(';
+  '(function(P){var r=document.documentElement,C="; "+document.cookie,i=0,j,p,t,n,c,x,k;' +
+  'for(P=JSON.parse(P);p=P[i++];)try{t=p[2];n=C.split("; "+p[0]+"=")[1];' +
+  'if(n!=null)try{n=decodeURIComponent(n.split(";")[0].replace(/^"(.*)"$/,"$1"));' +
+  'if(t===1){c=parseFloat(n);n=c===+n&&isFinite(c)?""+c:null}' +
+  'else if(t)n={}.hasOwnProperty.call(t,n)?t[n]:null}catch(e){n=null}' +
+  'if(n==null)n=p[3];' +
+  'for(j=0;x=p[1][j++];)if(x=="class"){for(k in t)r.classList.remove(t[k]);n!=null&&r.classList.add(n)}' +
+  'else x[0]=="-"?n==null?r.style.removeProperty(x):r.style.setProperty(x,n):n==null?r.removeAttribute(x):r.setAttribute(x,n)}catch(e){}})(';
 
 /**
  * The inline script for these reflections, or `''` when there are none. The config is
