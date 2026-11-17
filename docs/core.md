@@ -56,6 +56,10 @@ import { PrefsProvider } from 'prefkit/react'
 </PrefsProvider>
 ```
 
-`snapshot` holds only the raw cookies of your prefs and is serializable. Omit it for a static page: hooks then render defaults until hydration ends. Place the provider at the top of `<body>`. In the Pages Router, compute the snapshot in `getServerSideProps` and pass it to the provider in `_app`.
+`snapshot` holds only the raw cookies of your prefs and is serializable. Omit it for a static page: hooks then render defaults until hydration ends. Place the provider at the top of `<body>`.
+
+The client must hydrate with the same snapshot the server rendered with: pass it down (loader data, serialized props, an inline JSON script) and give it to the client `PrefsProvider`. During SSR and hydration `usePref` returns the value from the nearest provider's `snapshot`, or the default when there is none. Without the snapshot on the client, hooks render defaults while the server HTML holds the cookie values, and React reports a hydration mismatch. The pre-paint script changes `<html>` attributes before hydration, so put `suppressHydrationWarning` on `<html>` (in the Pages Router, in `_document`).
+
+In the Pages Router, compute the snapshot in `getServerSideProps` and pass it to the provider in `_app`.
 
 See also: [Next.js guide](nextjs.md), [security and platform notes](security.md).
