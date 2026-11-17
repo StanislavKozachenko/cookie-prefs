@@ -52,15 +52,15 @@ jobs:
           VERSION="${{ steps.version.outputs.value }}"
           DATE=$(date +%Y-%m-%d)
           LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          # No tag yet (first release): use the whole history
+          RANGE="${LAST_TAG:+${LAST_TAG}..}HEAD"
 
           # $2 = "!" selects only breaking commits (feat!: ...), "" only non-breaking ones
           get_section() {
             local prefix=$1 bang=$2
-            if [ -n "$LAST_TAG" ]; then
-              git log "${LAST_TAG}..HEAD" --pretty=format:"%s" \
-                | grep -E "^(${prefix})(\([^)]+\))?${bang}:" \
-                | sed -E "s/^[a-z]+(\([^)]+\))?!?: /- /" || true
-            fi
+            git log $RANGE --pretty=format:"%s" \
+              | grep -E "^(${prefix})(\([^)]+\))?${bang}:" \
+              | sed -E "s/^[a-z]+(\([^)]+\))?!?: /- /" || true
           }
 
           BREAKING=$(get_section "feat|fix|refactor|perf|docs|ci" "!")
