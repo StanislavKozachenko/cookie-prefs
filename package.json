@@ -108,6 +108,15 @@
       "ignore": [
         "prefkit"
       ]
+    },
+    {
+      "name": "prefkit/theme",
+      "path": "dist/theme/index.js",
+      "limit": "1800 B",
+      "gzip": true,
+      "ignore": [
+        "prefkit"
+      ]
     }
   ],
   "peerDependencies": {
