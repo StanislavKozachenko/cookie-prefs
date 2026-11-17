@@ -110,7 +110,7 @@ const subscribeSystem = (onChange: () => void) => {
 const none = () => undefined;
 
 /** Whether `document.cookie` holds a cookie of this (encoded) name, valid or not. */
-const exists = (name: string) => ('; ' + document.cookie).indexOf('; ' + name + '=') >= 0;
+const exists = (name: string) => ('; ' + document.cookie).split('; ' + name + '=')[1] != null;
 
 /** Theme cookie names already checked for a refresh in this page load. */
 const seen = new Set<string>();
