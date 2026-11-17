@@ -38,10 +38,13 @@ ci: add test matrix
 
 ```text
 src/index.ts          prefkit (zero-dependency core)
+src/core/             core internals: builder, cookie, store, sync, reflect, types, standard-schema
 src/react/index.tsx   prefkit/react
 src/next/index.tsx    prefkit/next
 src/theme/index.tsx   prefkit/theme
 ```
+
+Tests go in the `__tests__` folder next to the code they cover: `src/core/__tests__/`, `src/react/__tests__/`, `src/next/__tests__/` and `src/theme/__tests__/`. Vitest runs `*.test.ts` and `*.test.tsx`; `*.test-d.ts` files are type tests, checked by `npm run typecheck`.
 
 The core must keep zero runtime dependencies and stay within the 2 KB gzip budget (`npm run size`).
 
