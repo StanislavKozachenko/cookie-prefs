@@ -284,6 +284,22 @@ describe('reflection on <html>', () => {
       expect(recoverable).not.toHaveBeenCalled();
     });
 
+    it('keeps the first script text when the script changes after hydration', async () => {
+      const prefs = make();
+      document.cookie = 'theme=dark';
+      const node = bare(prefs);
+      const { container, errors, recoverable } = await hydrate(node, serve(node));
+      const text = container.querySelector('script')!.textContent;
+      const other = definePrefs({
+        theme: pref.enum(['light', 'dark', 'system']).default('system').reflect('data-mode'),
+      });
+      act(() => root!.render(bare(other)));
+      expect(html.getAttribute('data-mode')).toBe('dark'); // the new script is applied
+      expect(container.querySelector('script')!.textContent).toBe(text);
+      expect(errors).not.toHaveBeenCalled();
+      expect(recoverable).not.toHaveBeenCalled();
+    });
+
     it('follows other tabs when the tab becomes visible again', async () => {
       const prefs = make();
       const node = bare(prefs);

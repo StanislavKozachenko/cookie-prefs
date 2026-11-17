@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { act, StrictMode, version, type ComponentType, type ReactNode } from 'react';
+import { act, Profiler, StrictMode, version, type ComponentType, type ReactNode } from 'react';
 import { createRoot, hydrateRoot, type Root } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -225,6 +225,33 @@ describe('useTheme', () => {
     set('dark');
     expect(write).toHaveBeenLastCalledWith('theme=dark; Path=/; Max-Age=34560000; SameSite=lax');
   });
+
+  it('writes the cookie with the cookie prop attributes', () => {
+    const write = vi.spyOn(Document.prototype, 'cookie', 'set');
+    render(
+      app({
+        cookie: { domain: 'example.com', path: '/app', maxAge: 60, sameSite: 'none', secure: true, partitioned: true },
+      }),
+    );
+    set('dark');
+    expect(write).toHaveBeenLastCalledWith(
+      'theme=dark; Path=/app; Domain=example.com; Max-Age=60; SameSite=none; Secure; Partitioned',
+    );
+  });
+
+  it('keeps its store and effects across renders with a new but equal cookie literal', () => {
+    render(app({ cookie: { sameSite: 'strict' } }));
+    const first = current.setTheme;
+    const paint = vi.spyOn(html, 'setAttribute');
+    rerender(app({ cookie: { sameSite: 'strict' } }));
+    expect(current.setTheme).toBe(first);
+    expect(paint).not.toHaveBeenCalled();
+    rerender(app({ cookie: { sameSite: 'none', secure: true } }));
+    expect(current.setTheme).not.toBe(first);
+    const write = vi.spyOn(Document.prototype, 'cookie', 'set');
+    set('dark');
+    expect(write).toHaveBeenLastCalledWith('theme=dark; Path=/; Max-Age=34560000; SameSite=none; Secure');
+  });
 });
 
 describe('system theme', () => {
@@ -260,6 +287,29 @@ describe('system theme', () => {
     act(() => root!.unmount());
     root = undefined;
     expect(system.listeners.size).toBe(0);
+  });
+
+  it('falls back to addListener where MediaQueryList has no addEventListener (Safari < 14)', () => {
+    let dark = false;
+    const listeners = new Set<() => void>();
+    vi.stubGlobal('matchMedia', () => ({
+      get matches() {
+        return dark;
+      },
+      addListener: (listener: () => void) => listeners.add(listener),
+      removeListener: (listener: () => void) => listeners.delete(listener),
+    }));
+    render(app({ attribute: 'class' }));
+    expect(html.className).toBe('light');
+    act(() => {
+      dark = true;
+      listeners.forEach((listener) => listener());
+    });
+    expect(html.className).toBe('dark');
+    expect(current.systemTheme).toBe('dark');
+    act(() => root!.unmount());
+    root = undefined;
+    expect(listeners.size).toBe(0);
   });
 
   it('works without matchMedia (jsdom without a mock)', () => {
@@ -400,9 +450,37 @@ describe('next-themes migration', () => {
     expect(cookie('theme')).toBe('dark');
     expect(current.theme).toBe('dark');
     expect(html.getAttribute('data-theme')).toBe('dark');
+    expect(localStorage.getItem('theme')).toBeNull();
     set('light');
     expect(cookie('theme')).toBe('light');
-    expect(localStorage.getItem('theme')).toBe('dark'); // left for a rollback
+  });
+
+  it('runs once: a stale value never comes back when the cookie goes away later', () => {
+    localStorage.setItem('theme', 'dark');
+    render(app());
+    set('light'); // the user's newer choice
+    act(() => root!.unmount());
+    clearCookies(); // expiry, Safari's cap on script-written cookies, cleared cookies
+    render(app());
+    expect(current.theme).toBe('system');
+    expect(document.cookie).toBe('');
+  });
+
+  it('keeps the value when the cookie write does not stick (cookies blocked)', () => {
+    localStorage.setItem('theme', 'dark');
+    vi.spyOn(Document.prototype, 'cookie', 'set').mockImplementation(() => {});
+    render(app());
+    expect(localStorage.getItem('theme')).toBe('dark');
+  });
+
+  it('still migrates when removing the value throws', () => {
+    localStorage.setItem('theme', 'dark');
+    vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
+      throw new DOMException('denied', 'SecurityError');
+    });
+    render(app());
+    expect(cookie('theme')).toBe('dark');
+    expect(current.theme).toBe('dark');
   });
 
   it('uses the storageKey for both', () => {
@@ -411,11 +489,12 @@ describe('next-themes migration', () => {
     expect(cookie('my-theme')).toBe('dark');
   });
 
-  it('ignores an invalid value', () => {
+  it('ignores and removes an invalid value', () => {
     localStorage.setItem('theme', 'blue');
     render(app());
     expect(document.cookie).toBe('');
     expect(current.theme).toBe('system');
+    expect(localStorage.getItem('theme')).toBeNull();
   });
 
   it('never overrides an existing cookie', () => {
@@ -449,6 +528,70 @@ describe('next-themes migration', () => {
     } finally {
       Object.defineProperty(globalThis, 'localStorage', desc);
     }
+  });
+});
+
+describe('refresh against Safari’s 7-day cap on script-written cookies', () => {
+  // Refreshed cookie names are remembered for the page load (the module), so every
+  // test uses its own storageKey.
+  const writes = () => vi.spyOn(Document.prototype, 'cookie', 'set');
+  /** The provider in a Profiler: `commits` counts every render committed below it. */
+  const profiled = (props: ThemeProviderProps) => {
+    const commits = vi.fn();
+    const node = (
+      <StrictMode>
+        <Profiler id="theme" onRender={commits}>
+          {app(props)}
+        </Profiler>
+      </StrictMode>
+    );
+    return { node, commits };
+  };
+
+  it('re-writes an existing cookie once per page load, without a re-render', () => {
+    const control = profiled({ storageKey: 'r0' }); // no cookie: nothing to refresh
+    render(control.node);
+    act(() => root!.unmount());
+    document.cookie = 'r1=dark';
+    const write = writes();
+    const { node, commits } = profiled({ storageKey: 'r1' });
+    render(node);
+    expect(write).toHaveBeenCalledTimes(1);
+    expect(write).toHaveBeenCalledWith('r1=dark; Path=/; Max-Age=34560000; SameSite=lax');
+    expect(current.theme).toBe('dark');
+    expect(commits).toHaveBeenCalledTimes(control.commits.mock.calls.length);
+    act(() => root!.unmount());
+    render(profiled({ storageKey: 'r1', attribute: 'class' }).node); // same page load
+    expect(write).toHaveBeenCalledTimes(1);
+    set('light');
+    expect(write).toHaveBeenCalledTimes(2);
+  });
+
+  it('re-writes an existing cookie once after hydration, without errors', async () => {
+    document.cookie = 'r2=dark';
+    const node = <StrictMode>{app({ storageKey: 'r2' })}</StrictMode>;
+    const markup = serve(node);
+    const write = writes();
+    const { errors, recoverable } = await hydrate(node, markup);
+    expect(write).toHaveBeenCalledTimes(1);
+    expect(write).toHaveBeenCalledWith('r2=dark; Path=/; Max-Age=34560000; SameSite=lax');
+    expect(current.theme).toBe('dark');
+    expect(errors).not.toHaveBeenCalled();
+    expect(recoverable).not.toHaveBeenCalled();
+  });
+
+  it('never creates a missing cookie', () => {
+    const write = writes();
+    render(app({ storageKey: 'r3' }));
+    expect(write).not.toHaveBeenCalled();
+    expect(document.cookie).toBe('');
+  });
+
+  it('does not write on the server', () => {
+    document.cookie = 'r4=dark';
+    const write = writes();
+    ssr(app({ storageKey: 'r4' }));
+    expect(write).not.toHaveBeenCalled();
   });
 });
 
@@ -637,6 +780,23 @@ describe('next-themes regressions', () => {
       expect(html.className).toBe('light');
       expect(create).not.toHaveBeenCalledWith('script');
       expect(evaluate).not.toHaveBeenCalled();
+      expect(errors).not.toHaveBeenCalled();
+      expect(recoverable).not.toHaveBeenCalled();
+    });
+
+    it('keeps the first script text when props change after hydration (forcedTheme per route)', async () => {
+      document.cookie = 'theme=light';
+      const node = (forcedTheme?: string) => app({ attribute: 'class', forcedTheme });
+      const markup = serve(node());
+      restore = blockScriptText();
+      const { container, errors, recoverable } = await hydrate(node(), markup);
+      const text = container.querySelector('script')!.textContent;
+      rerender(node('dark')); // navigate to a page with a forced theme
+      expect(html.className).toBe('dark');
+      expect(current.forcedTheme).toBe('dark');
+      rerender(node());
+      expect(html.className).toBe('light');
+      expect(container.querySelector('script')!.textContent).toBe(text);
       expect(errors).not.toHaveBeenCalled();
       expect(recoverable).not.toHaveBeenCalled();
     });

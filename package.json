@@ -94,7 +94,7 @@
     {
       "name": "prefkit/react",
       "path": "dist/react/index.js",
-      "limit": "880 B",
+      "limit": "980 B",
       "gzip": true,
       "ignore": [
         "prefkit"
@@ -112,7 +112,7 @@
     {
       "name": "prefkit/theme",
       "path": "dist/theme/index.js",
-      "limit": "1800 B",
+      "limit": "1910 B",
       "gzip": true,
       "ignore": [
         "prefkit"

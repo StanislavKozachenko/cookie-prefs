@@ -1,4 +1,4 @@
-import { definePrefs, pref } from 'prefkit';
+import { definePrefs, pref, type CookieOptions } from 'prefkit';
 import {
   createContext,
   useContext,
@@ -6,6 +6,7 @@ import {
   useLayoutEffect,
   useMemo,
   useReducer,
+  useState,
   useSyncExternalStore,
   type DetailedHTMLProps,
   type Dispatch,
@@ -25,7 +26,7 @@ export interface ScriptProps
   [dataAttribute: `data-${string}`]: unknown;
 }
 
-/** Same props and defaults as next-themes `ThemeProvider`. */
+/** Same props and defaults as next-themes `ThemeProvider`, plus `cookie`. */
 export interface ThemeProviderProps {
   children?: ReactNode;
   /** All theme names. `'system'` is added when `enableSystem` is on. @default ['light', 'dark'] */
@@ -40,7 +41,8 @@ export interface ThemeProviderProps {
   enableColorScheme?: boolean | undefined;
   /**
    * Cookie name that stores the choice. A value left in `localStorage` under the same
-   * key by next-themes is moved to the cookie once. @default 'theme'
+   * key by next-themes is moved to the cookie once and removed from `localStorage`, so
+   * rolling back to next-themes starts from its default. @default 'theme'
    */
   storageKey?: string | undefined;
   /** Theme when nothing is stored. @default enableSystem ? 'system' : 'light' */
@@ -53,6 +55,16 @@ export interface ThemeProviderProps {
   nonce?: string | undefined;
   /** Extra props for the inline script element. */
   scriptProps?: ScriptProps | undefined;
+  /**
+   * Attributes of the theme cookie, as for any pref (not in next-themes). Defaults:
+   * `Path=/`, `SameSite=Lax`, 400 days, current host only, `Secure` on `https:`.
+   * @example
+   * // one theme for app.example.com and www.example.com
+   * <ThemeProvider cookie={{ domain: 'example.com' }}>
+   * // inside a cross-site iframe
+   * <ThemeProvider cookie={{ sameSite: 'none', secure: true, partitioned: true }}>
+   */
+  cookie?: CookieOptions | undefined;
 }
 
 /**
@@ -84,19 +96,35 @@ const DEFAULT_THEMES = ['light', 'dark'];
 // React 18 warns about `useLayoutEffect` during SSR; the effects only matter in the browser.
 const useLayout = typeof document == 'undefined' ? useEffect : useLayoutEffect;
 
+// Safari and iOS before 14 only have the older `addListener` / `removeListener`.
 const subscribeSystem = (onChange: () => void) => {
   const query = media();
-  query?.addEventListener('change', onChange);
-  return () => query?.removeEventListener('change', onChange);
+  if (query?.addEventListener) query.addEventListener('change', onChange);
+  else query?.addListener(onChange);
+  return () => {
+    if (query?.removeEventListener) query.removeEventListener('change', onChange);
+    else query?.removeListener(onChange);
+  };
 };
 
 const none = () => undefined;
+
+/** Whether `document.cookie` holds a cookie of this (encoded) name, valid or not. */
+const exists = (name: string) => ('; ' + document.cookie).indexOf('; ' + name + '=') >= 0;
+
+/** Theme cookie names already checked for a refresh in this page load. */
+const seen = new Set<string>();
 
 /**
  * Drop-in replacement for next-themes `ThemeProvider`, stored in a cookie so the
  * server can read it. Migration is an import swap. Its inline script never triggers
  * the React 19 script warning and needs no `cookies()` read, so pages stay static.
  * Add `suppressHydrationWarning` to `<html>`.
+ *
+ * Safari caps cookies written by scripts at 7 days, so once per page load the
+ * provider re-writes an existing theme cookie: the choice lasts 7 days after the
+ * last visit there, not after the last change. A cookie set by the server
+ * (`Set-Cookie`, e.g. middleware) is not capped.
  * @example
  * <html lang="en" suppressHydrationWarning>
  *   <body>
@@ -123,6 +151,7 @@ function Theme({
   value,
   nonce,
   scriptProps,
+  cookie,
 }: ThemeProviderProps): ReactElement {
   const listed = enableSystem ? [...themes, 'system'] : themes;
   // Every valid stored name to its DOM string. `value` keys are themes too, as in the
@@ -140,14 +169,19 @@ function Theme({
     enableColorScheme ? (LIGHT_DARK.test(defaultTheme) ? defaultTheme : '') : null,
   ];
   const script = themeScript(fresh);
-  // Inline `themes` and `value` literals are new objects on every render, so the store,
-  // the config and the setter are keyed on the script, which encodes all of them.
+  // Only the first script is rendered: it ran (or not) when the page was parsed, the
+  // client copy is inert, and new text on a hydrated script is an `innerHTML` write
+  // that enforced Trusted Types reject. The live config below drives the client.
+  const [first] = useState(script);
+  // Inline `themes`, `value` and `cookie` literals are new objects on every render, so
+  // the store, the config and the setter are keyed on the script, which encodes all of
+  // them but `cookie`, and on `cookie` as JSON.
   const [handle, config, themeList, setTheme] = useMemo(() => {
     const handle = definePrefs({
       theme: pref
         .enum(Object.keys(dom) as [string])
         .default(defaultTheme)
-        .options({ name: storageKey }),
+        .options({ ...cookie, name: storageKey }),
     }).theme;
     const setTheme: UseThemeProps['setTheme'] = (next) => {
       const name = typeof next == 'function' ? next(handle.get()) : next;
@@ -155,7 +189,7 @@ function Theme({
       if (has(dom, name)) handle.set(name);
     };
     return [handle, fresh, listed, setTheme] as const;
-  }, [script]);
+  }, [script, JSON.stringify(cookie)]);
 
   // External stores, so a provider kept hidden by <Activity> never holds a stale theme
   // (next-themes #375). `undefined` during SSR and hydration, as in next-themes.
@@ -168,15 +202,26 @@ function Theme({
   // (Strict Mode), and on every change. It reads the current cookie, never rendered
   // state, so re-running on an <Activity> reveal cannot bring an old theme back.
   useLayout(() => {
-    // One-time move from next-themes: no cookie yet, a valid name in localStorage.
-    // After the first write the cookie exists and this is a string search.
+    const once = !seen.has(handle.name);
+    seen.add(handle.name);
     try {
-      if (('; ' + document.cookie).indexOf('; ' + handle.name + '=') < 0) {
+      // One-time move from next-themes: no cookie yet, a valid name in localStorage. The
+      // value is removed once the cookie holds it (or when it is invalid), so a later
+      // missing cookie never brings it back.
+      if (!exists(handle.name)) {
         const stored = localStorage.getItem(config[1]);
-        if (stored != null && has(config[3], stored)) handle.set(stored);
+        if (stored != null) {
+          const valid = has(config[3], stored);
+          if (valid) handle.set(stored);
+          // Kept when the write did not stick (cookies blocked): nothing is lost.
+          if (!valid || exists(handle.name)) localStorage.removeItem(config[1]);
+        }
       }
+      // Safari caps script-written cookies at 7 days: re-write an existing cookie once
+      // per page load, so the window slides with visits. Same value: no notification.
+      else if (once) handle.set(handle.get());
     } catch {
-      // storage unavailable: keep the default
+      // storage or cookies unavailable: keep the default
     }
     const resume = disableTransitionOnChange && pauseTransitions(nonce);
     paint(config, handle.get());
@@ -219,7 +264,7 @@ function Theme({
         type={server ? 'text/javascript' : 'text/plain'}
         nonce={server ? nonce : undefined}
         suppressHydrationWarning
-        dangerouslySetInnerHTML={{ __html: script }}
+        dangerouslySetInnerHTML={{ __html: first }}
       />
       {children}
     </Context.Provider>

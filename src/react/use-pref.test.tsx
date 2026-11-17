@@ -192,6 +192,87 @@ describe('usePref on the client', () => {
   });
 });
 
+describe('usePref refresh against Safari’s 7-day cap on script-written cookies', () => {
+  const writes = () => vi.spyOn(Document.prototype, 'cookie', 'set');
+  const attrs = '; Path=/; Max-Age=34560000; SameSite=lax';
+
+  it('re-writes an existing cookie once per handle and page load, without a re-render', () => {
+    const control = probe(make().theme); // no cookie: nothing to refresh
+    render(
+      <StrictMode>
+        <control.Probe />
+      </StrictMode>,
+    );
+    act(() => root!.unmount());
+
+    const prefs = make();
+    document.cookie = 'theme=dark';
+    document.cookie = 'pageSize=50';
+    const listener = vi.fn();
+    const off = prefs.theme.subscribe(listener);
+    const write = writes();
+    const a = probe(prefs.theme);
+    const b = probe(prefs.theme);
+    const size = probe(prefs.pageSize);
+    const el = render(
+      <StrictMode>
+        <a.Probe />
+        <b.Probe />
+        <size.Probe />
+      </StrictMode>,
+    );
+    expect(el.textContent).toBe('"dark""dark"50');
+    expect(write.mock.calls).toEqual([['theme=dark' + attrs], ['pageSize=50' + attrs]]);
+    expect(a.seen.length).toBe(control.seen.length);
+    expect(listener).not.toHaveBeenCalled();
+    off();
+
+    act(() => root!.unmount());
+    render(<a.Probe />); // same page load: once is enough
+    expect(write).toHaveBeenCalledTimes(2);
+  });
+
+  it('never creates a missing cookie', () => {
+    const prefs = make();
+    const write = writes();
+    const { Probe } = probe(prefs.theme);
+    render(<Probe />);
+    expect(write).not.toHaveBeenCalled();
+    expect(document.cookie).toBe('');
+  });
+
+  it('leaves a cookie alone when writing it back would change the value', () => {
+    const prefs = make();
+    document.cookie = 'columns=%5B%22a%22%2C%20%22b%22%5D'; // ["a", "b"]: JSON.stringify drops the space
+    document.cookie = 'locale=%E0'; // malformed, no default: undefined
+    document.cookie = 'list=oops'; // invalid, no default: undefined
+    const { list } = definePrefs({ list: pref.json(z.array(z.string())) });
+    const write = writes();
+    const columns = probe(prefs.columns);
+    const locale = probe(prefs.locale);
+    const listed = probe(list);
+    const el = render(
+      <>
+        <columns.Probe />
+        <locale.Probe />
+        <listed.Probe />
+      </>,
+    );
+    expect(el.textContent).toBe('["a","b"]undefinedundefined');
+    expect(write).not.toHaveBeenCalled();
+    expect(columns.seen).toHaveLength(1);
+  });
+
+  it('does not write on the server', () => {
+    const prefs = make();
+    document.cookie = 'theme=dark';
+    const write = writes();
+    const { Probe } = probe(prefs.theme);
+    ssr(<Probe />);
+    expect(write).not.toHaveBeenCalled();
+  });
+});
+
 describe('usePref on the server', () => {
   it('renders the default without a provider and never reads document.cookie', () => {
     const prefs = make();
