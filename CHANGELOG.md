@@ -10,6 +10,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ---
 
+## [0.1.1] - 2026-11-17
+
+### Changed
+
+- say that toCookie() maxAge is in seconds, unlike Express (#54)
+- add a downloads badge and a preview image (#52)
+
+---
+
 ## [0.1.0] - 2026-11-17
 
 ### Added
