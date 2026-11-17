@@ -1,8 +1,8 @@
 # Next.js guide
 
-`prefkit/next`: `PrefsProvider` modes, refreshing server output, nonce and how request cookies are read. Back to the [README](../README.md).
+`cookie-prefs/next`: `PrefsProvider` modes, refreshing server output, nonce and how request cookies are read. Back to the [README](../README.md).
 
-`prefkit/next` is a server-only entry for the App Router with two exports, `PrefsProvider` (an async Server Component) and `getPrefs`; see the Quick start in the README. Both read the request's raw `Cookie` header and parse it the way the browser parses `document.cookie` (the first of duplicate cookies wins, quotes are stripped), so the server never disagrees with what the inline script already put on `<html>`. A pref cookie set or deleted earlier in the same request (in a Server Action or in middleware) is taken from `cookies()` instead, so `getPrefs` and `mode="server"` see it in that same response.
+`cookie-prefs/next` is a server-only entry for the App Router with two exports, `PrefsProvider` (an async Server Component) and `getPrefs`; see the Quick start in the README. Both read the request's raw `Cookie` header and parse it the way the browser parses `document.cookie` (the first of duplicate cookies wins, quotes are stripped), so the server never disagrees with what the inline script already put on `<html>`. A pref cookie set or deleted earlier in the same request (in a Server Action or in middleware) is taken from `cookies()` instead, so `getPrefs` and `mode="server"` see it in that same response.
 
 ## Modes
 
@@ -30,7 +30,7 @@ Client writes do not re-render Server Components. When server output depends on 
 ```tsx
 'use client'
 import { useRouter } from 'next/navigation'
-import { usePref } from 'prefkit/react'
+import { usePref } from 'cookie-prefs/react'
 import { prefs } from './prefs'
 
 export function DensityToggle() {

@@ -2,7 +2,7 @@
 
 ## Reporting bugs
 
-Open an issue with the entry point (`prefkit`, `prefkit/react`, `prefkit/next` or `prefkit/theme`), the versions of prefkit, React, Next.js and Node.js, and a minimal reproduction.
+Open an issue with the entry point (`cookie-prefs`, `cookie-prefs/react`, `cookie-prefs/next` or `cookie-prefs/theme`), the versions of cookie-prefs, React, Next.js and Node.js, and a minimal reproduction.
 
 ## Development setup
 
@@ -37,11 +37,11 @@ ci: add test matrix
 ## Layout
 
 ```text
-src/index.ts          prefkit (zero-dependency core)
+src/index.ts          cookie-prefs (zero-dependency core)
 src/core/             core internals: builder, cookie, store, sync, reflect, types, standard-schema
-src/react/index.tsx   prefkit/react
-src/next/index.tsx    prefkit/next
-src/theme/index.tsx   prefkit/theme
+src/react/index.tsx   cookie-prefs/react
+src/next/index.tsx    cookie-prefs/next
+src/theme/index.tsx   cookie-prefs/theme
 ```
 
 Tests go in the `__tests__` folder next to the code they cover: `src/core/__tests__/`, `src/react/__tests__/`, `src/next/__tests__/` and `src/theme/__tests__/`. Vitest runs `*.test.ts` and `*.test.tsx`; `*.test-d.ts` files are type tests, checked by `npm run typecheck`.

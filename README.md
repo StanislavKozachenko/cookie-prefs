@@ -1,24 +1,24 @@
-# prefkit
+# cookie-prefs
 
-[![CI](https://github.com/StanislavKozachenko/prefkit/actions/workflows/ci.yml/badge.svg)](https://github.com/StanislavKozachenko/prefkit/actions/workflows/ci.yml)
+[![CI](https://github.com/StanislavKozachenko/cookie-prefs/actions/workflows/ci.yml/badge.svg)](https://github.com/StanislavKozachenko/cookie-prefs/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-Typed, cookie-backed user preferences for React and Next.js: theme, sidebar, density, locale, anything small. nuqs keeps state in the URL; prefkit keeps it in cookies, so the server knows it before the first render.
+Typed, cookie-backed user preferences for React and Next.js: theme, sidebar, density, locale, anything small. nuqs keeps state in the URL; cookie-prefs keeps it in cookies, so the server knows it before the first render.
 
 - Readable in Server Components and on the client, with no hydration flash.
 - Reflected on `<html>` before first paint (class, `data-*` attribute or CSS variable), so CSS can react to a preference without JavaScript.
 - Synced across tabs.
 - Typed end to end; invalid or missing cookies read as the default and never throw.
 - The core has zero dependencies and fits a 2 kB gzip budget. `react` and `next` are optional peer dependencies.
-- `prefkit/theme` is an API-compatible replacement for [next-themes](https://github.com/pacocoursey/next-themes) (its last release, 0.4.6, was in March 2025) that stores the choice in a cookie.
+- `cookie-prefs/theme` is an API-compatible replacement for [next-themes](https://github.com/pacocoursey/next-themes) (its last release, 0.4.6, was in March 2025) that stores the choice in a cookie.
 
 ## Install
 
 ```sh
-npm install prefkit
+npm install cookie-prefs
 ```
 
-Peer dependencies, both optional: `react >=18` (for `prefkit/react`, `prefkit/next`, `prefkit/theme`) and `next >=14` (for `prefkit/next`).
+Peer dependencies, both optional: `react >=18` (for `cookie-prefs/react`, `cookie-prefs/next`, `cookie-prefs/theme`) and `next >=14` (for `cookie-prefs/next`).
 
 ## Quick start (Next.js App Router)
 
@@ -26,7 +26,7 @@ Define the prefs once in a plain module that both server and client code import:
 
 ```ts
 // app/prefs.ts
-import { definePrefs, pref } from 'prefkit'
+import { definePrefs, pref } from 'cookie-prefs'
 
 export const prefs = definePrefs({
   theme: pref.enum(['light', 'dark', 'system']).default('system').reflect('class'),
@@ -40,7 +40,7 @@ Add the provider to the root layout, at the top of `<body>`, and `suppressHydrat
 
 ```tsx
 // app/layout.tsx
-import { PrefsProvider } from 'prefkit/next'
+import { PrefsProvider } from 'cookie-prefs/next'
 import { prefs } from './prefs'
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -58,7 +58,7 @@ Use a pref in a Client Component like `useState`:
 
 ```tsx
 'use client'
-import { usePref } from 'prefkit/react'
+import { usePref } from 'cookie-prefs/react'
 import { prefs } from './prefs'
 
 export function SidebarToggle() {
@@ -70,7 +70,7 @@ export function SidebarToggle() {
 Read it in a Server Component (this makes the route dynamic):
 
 ```tsx
-import { getPrefs } from 'prefkit/next'
+import { getPrefs } from 'cookie-prefs/next'
 import { prefs } from './prefs'
 
 export default async function Page() {
@@ -94,12 +94,12 @@ export async function setLocale(locale: string) {
 
 ## The entries
 
-| Import          | What it is                                                                                  | Guide |
-| --------------- | ------------------------------------------------------------------------------------------- | ----- |
-| `prefkit`       | Core, no DOM required: `definePrefs`, `pref.*`, `readPrefs`, `snapshotPrefs`, `prefsScript` | [Core](docs/core.md) |
-| `prefkit/react` | `usePref`, and `PrefsProvider` for SSR outside Next.js                                      | [Core](docs/core.md#prefkitreact-outside-nextjs) |
-| `prefkit/next`  | Server-only: `PrefsProvider`, `getPrefs` (App Router)                                       | [Next.js](docs/nextjs.md) |
-| `prefkit/theme` | next-themes compatible `ThemeProvider` and `useTheme`                                       | [Theme](docs/theme.md) |
+| Import               | What it is                                                                                  | Guide |
+| -------------------- | ------------------------------------------------------------------------------------------- | ----- |
+| `cookie-prefs`       | Core, no DOM required: `definePrefs`, `pref.*`, `readPrefs`, `snapshotPrefs`, `prefsScript` | [Core](docs/core.md) |
+| `cookie-prefs/react` | `usePref`, and `PrefsProvider` for SSR outside Next.js                                      | [Core](docs/core.md#cookie-prefsreact-outside-nextjs) |
+| `cookie-prefs/next`  | Server-only: `PrefsProvider`, `getPrefs` (App Router)                                       | [Next.js](docs/nextjs.md) |
+| `cookie-prefs/theme` | next-themes compatible `ThemeProvider` and `useTheme`                                       | [Theme](docs/theme.md) |
 
 ## Next.js modes
 
@@ -113,19 +113,19 @@ export async function setLocale(locale: string) {
 
 ```diff
 - import { ThemeProvider, useTheme } from 'next-themes'
-+ import { ThemeProvider, useTheme } from 'prefkit/theme'
++ import { ThemeProvider, useTheme } from 'cookie-prefs/theme'
 ```
 
 Props and hook fields keep their next-themes names and defaults; the choice lives in a cookie, and existing `localStorage` themes are moved once. Setup and the full list of differences are in the [Theme guide](docs/theme.md).
 
 ## Security and platform notes
 
-Prefs are readable by every script on the page: never store secrets. The pre-paint script needs a CSP nonce under strict policies, and Safari caps script-written cookies at 7 days (prefkit refreshes the long-lived ones once per page load). Details, Trusted Types, iframes and non-goals are in [Security and platform notes](docs/security.md).
+Prefs are readable by every script on the page: never store secrets. The pre-paint script needs a CSP nonce under strict policies, and Safari caps script-written cookies at 7 days (cookie-prefs refreshes the long-lived ones once per page load). Details, Trusted Types, iframes and non-goals are in [Security and platform notes](docs/security.md).
 
 ## Compatibility
 
 - React 18 and 19.
-- Next.js 14 and newer, App Router. For the Pages Router use `prefkit/react` with `snapshotPrefs`. `>=14` is the supported range; the project's end-to-end tests do not cover every Next.js major.
+- Next.js 14 and newer, App Router. For the Pages Router use `cookie-prefs/react` with `snapshotPrefs`. `>=14` is the supported range; the project's end-to-end tests do not cover every Next.js major.
 - CI runs lint, type checks, build and tests on Node.js 22 and 24, on Linux, Windows and macOS. The package declares no `engines`.
 - ESM and CJS builds with types for every entry.
 

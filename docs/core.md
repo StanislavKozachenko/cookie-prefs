@@ -1,6 +1,6 @@
 # Core and React guide
 
-Builders, handles and server helpers of `prefkit`, and `prefkit/react` outside Next.js. Back to the [README](../README.md).
+Builders, handles and server helpers of `cookie-prefs`, and `cookie-prefs/react` outside Next.js. Back to the [README](../README.md).
 
 ## Builders
 
@@ -9,7 +9,7 @@ Builders, handles and server helpers of `prefkit`, and `prefkit/react` outside N
 `pref.json` requires a synchronous [Standard Schema](https://standardschema.dev) validator (zod, valibot, arktype), because cookies are user-controlled input. Writes take the schema's input type, reads return its output. For anything else use `pref.custom`.
 
 ```ts
-import { definePrefs, pref, readPrefs } from 'prefkit'
+import { definePrefs, pref, readPrefs } from 'cookie-prefs'
 import * as z from 'zod'
 
 export const prefs = definePrefs(
@@ -41,15 +41,15 @@ Clearing is `reset()`, never `set(undefined)`. `set()` and `reset()` do nothing 
 
 `Path=/`, `SameSite=Lax`, `Max-Age` of 400 days (the cap browsers enforce; every write refreshes it), no `Domain`, and `Secure` added automatically on `https:` pages for browser writes. `toCookie()` omits `Secure` unless you set it. Change them for all prefs in `definePrefs(shape, options)` or per pref with `.options()`. An option set to `undefined` (or `null` in JavaScript) counts as not set and falls through to the earlier `.options()`, then the `definePrefs` options, then the default, so a conditional such as `{ domain: isProd ? 'example.com' : undefined }` is safe. `prefix: '__Host-'` opts into a cookie prefix and also needs `secure: true` and no `domain`.
 
-## `prefkit/react` outside Next.js
+## `cookie-prefs/react` outside Next.js
 
 `usePref(pref)` returns `[value, setValue]`. Every component using the same pref stays in sync, also across tabs.
 
 Outside Next.js (Vite, Remix, TanStack Start), wrap the app once so the server render sees the request's cookies and the pre-paint script is emitted:
 
 ```tsx
-import { prefsScript, snapshotPrefs } from 'prefkit'
-import { PrefsProvider } from 'prefkit/react'
+import { prefsScript, snapshotPrefs } from 'cookie-prefs'
+import { PrefsProvider } from 'cookie-prefs/react'
 
 <PrefsProvider snapshot={snapshotPrefs(prefs, cookieHeader)} script={prefsScript(prefs)} nonce={nonce}>
   <App />
