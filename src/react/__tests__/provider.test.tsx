@@ -117,6 +117,33 @@ const blockScriptText = () => {
   };
 };
 
+/**
+ * Records every `dangerouslySetInnerHTML` value React stores on a script element, at
+ * hydration and on each update. React 19.0 to 19.2 re-write `innerHTML` whenever that
+ * object is not the one of the previous render, even with the same text. Returns the
+ * list and the restore function.
+ */
+const recordScriptHtml = () => {
+  const probe = document.createElement('div');
+  const probeRoot = createRoot(probe);
+  act(() => probeRoot.render(<i />));
+  const key = Object.keys(probe.firstChild!).find((k) => k.startsWith('__reactProps$'))!;
+  act(() => probeRoot.unmount());
+  const values: unknown[] = [];
+  const props = new WeakMap<object, unknown>();
+  Object.defineProperty(HTMLScriptElement.prototype, key, {
+    configurable: true,
+    get(this: object) {
+      return props.get(this);
+    },
+    set(this: object, next: { dangerouslySetInnerHTML?: unknown }) {
+      values.push(next.dangerouslySetInnerHTML);
+      props.set(this, next);
+    },
+  });
+  return { values, restore: () => delete (HTMLScriptElement.prototype as unknown as Record<string, unknown>)[key] };
+};
+
 describe('hydration', () => {
   it('matches the server when the cookie is set (server mode)', async () => {
     const prefs = make();
@@ -296,6 +323,29 @@ describe('reflection on <html>', () => {
       act(() => root!.render(bare(other)));
       expect(html.getAttribute('data-mode')).toBe('dark'); // the new script is applied
       expect(container.querySelector('script')!.textContent).toBe(text);
+      expect(errors).not.toHaveBeenCalled();
+      expect(recoverable).not.toHaveBeenCalled();
+    });
+
+    it('hands React the same __html object on every render, so no React version re-writes the script', async () => {
+      const prefs = make();
+      document.cookie = 'theme=dark';
+      // a new snapshot re-renders the provider, as a refreshed Server Component payload does
+      const node = (snapshot: PrefsProviderProps['snapshot']) => bare(prefs, { snapshot });
+      const markup = serve(node({ theme: 'dark' }));
+      const block = restore;
+      const record = recordScriptHtml();
+      restore = () => {
+        record.restore();
+        block();
+      };
+      const { errors, recoverable } = await hydrate(node({ theme: 'dark' }), markup);
+      act(() => root!.render(node({ theme: 'dark' })));
+      act(() => root!.render(node({ theme: 'light' })));
+      // hydration and the two re-renders; React 18 stores props only at hydration and on a commit that
+      // changed something, so it records fewer
+      expect(record.values.length).toBeGreaterThanOrEqual(Number(version.split('.')[0]) < 19 ? 1 : 3);
+      expect(new Set(record.values).size).toBe(1);
       expect(errors).not.toHaveBeenCalled();
       expect(recoverable).not.toHaveBeenCalled();
     });
