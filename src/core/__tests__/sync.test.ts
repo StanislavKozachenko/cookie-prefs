@@ -180,6 +180,23 @@ describe('BroadcastChannel fallback', () => {
     off();
   });
 
+  it('falls back to no channel where BroadcastChannel cannot be constructed', () => {
+    // Chromium in an opaque origin (a sandboxed iframe without allow-same-origin), where
+    // CookieStore is missing too
+    const Channel = vi.fn(function () {
+      throw new DOMException("Can't create BroadcastChannel in an opaque origin", 'SecurityError');
+    });
+    vi.stubGlobal('BroadcastChannel', Channel);
+    const prefs = make();
+    const listener = vi.fn();
+    let off = () => {};
+    expect(() => (off = prefs.theme.subscribe(listener))).not.toThrow();
+    expect(() => prefs.theme.set('dark')).not.toThrow();
+    expect(listener).toHaveBeenCalledWith('dark');
+    expect(Channel).toHaveBeenCalled();
+    expect(off).not.toThrow();
+  });
+
   it('still works locally with neither CookieStore nor BroadcastChannel', () => {
     vi.stubGlobal('BroadcastChannel', undefined);
     const prefs = make();

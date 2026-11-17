@@ -5,11 +5,18 @@
  * changed, which also drops the echo of this tab's own writes.
  */
 
-/** A channel to the other tabs, when they cannot learn about writes from CookieStore. */
-const open = () =>
-  globalThis.cookieStore || typeof BroadcastChannel != 'function'
-    ? undefined
-    : new BroadcastChannel('cookie-prefs');
+/**
+ * A channel to the other tabs, when they cannot learn about writes from CookieStore.
+ * None where `BroadcastChannel` is missing or throws (an opaque origin, e.g. a
+ * sandboxed iframe): writes then reach only this tab.
+ */
+const open = () => {
+  try {
+    return globalThis.cookieStore ? undefined : new BroadcastChannel('cookie-prefs');
+  } catch {
+    // no channel
+  }
+};
 
 /** Re-check functions of prefs that have at least one listener. */
 const subs = new Set<() => void>();
