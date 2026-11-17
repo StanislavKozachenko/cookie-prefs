@@ -97,7 +97,7 @@ const { theme, resolvedTheme, setTheme } = useTheme()
 Other decisions:
 
 - `PrefsProvider` in `prefkit/next` defaults to `mode="script"`: dropping it into the root layout must not make the whole app dynamic or break Cache Components builds. `mode="server"` is opt-in for apps that are dynamic anyway.
-- `pref.json` requires a Standard Schema: cookies are user-controlled input, so there is no unchecked `json<T>()`. Use `pref.custom()` as the escape hatch. Validation is synchronous; a schema returning a Promise reads as the default.
+- `pref.json` requires a Standard Schema: cookies are user-controlled input, so there is no unchecked `json<T>()`. Use `pref.custom()` as the escape hatch. Validation is synchronous; a schema returning a Promise reads as the default. The cookie holds `JSON.stringify(value)` and every read validates it, so writes (`set`, `toCookie`) take the schema input (without `undefined`; clear with `reset()`), while reads, the updater's `prev` and `.default()` (returned as is) use its output. They differ only for transforming schemas: `z.string().transform(...)` is written as a string.
 - Invalid or missing cookie means default, never throw; this includes `parse` throwing, JSON errors, out-of-list enum values and `NaN`.
 - The theme preset stores in a cookie named `storageKey` (default `theme`), reads a next-themes value from `localStorage[storageKey]` once when the cookie is missing and moves it to the cookie (removing it from `localStorage`), passes nested providers through like next-themes, and is script-mode only (no `cookies()` read).
 

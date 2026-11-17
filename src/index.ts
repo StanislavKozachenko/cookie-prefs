@@ -1,7 +1,7 @@
 import { builder, type Def } from './builder';
 import { rawOf } from './cookie';
 import { script, type Reflection } from './reflect';
-import type { InferSchemaOutput, StandardSchemaV1 } from './standard-schema';
+import type { InferSchemaInput, InferSchemaOutput, StandardSchemaV1 } from './standard-schema';
 import { bind, REFLECTION } from './store';
 import type {
   CookieSource,
@@ -72,9 +72,17 @@ export interface PrefFactory {
   /**
    * A JSON value checked by any Standard Schema validator (zod, valibot, arktype).
    * Validation must be synchronous; a schema that returns a Promise reads as the default.
+   * Writes take the schema's input (it is stored as JSON and validated on read), reads
+   * and `.default()` its output; they differ only for transforming schemas.
    * @example pref.json(z.array(z.string())).default([])
    */
-  json<S extends StandardSchemaV1>(schema: S): PrefBuilder<InferSchemaOutput<S>>;
+  json<S extends StandardSchemaV1>(
+    schema: S,
+  ): PrefBuilder<
+    Exclude<InferSchemaInput<S>, undefined>,
+    InferSchemaOutput<S> | undefined,
+    InferSchemaOutput<S>
+  >;
   /**
    * Your own codec. `parse` returning `undefined` or throwing reads as the default.
    * @example pref.custom({ parse: (raw) => new Date(raw), serialize: (d) => d.toISOString() })

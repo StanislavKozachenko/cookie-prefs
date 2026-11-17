@@ -102,14 +102,17 @@ export interface PrefTypes<T, V> {
 /**
  * An unbound pref definition, created by `pref.*`. Builders are immutable: every
  * method returns a new builder. Pass builders to `definePrefs()` to get handles.
+ * `T` is the writable type, `V` the read type, `O` the parsed value type that
+ * `.default()` takes. `O` differs from `T` only for `pref.json()` with a transforming
+ * schema, which is written with the schema's input and read as its output.
  */
-export interface PrefBuilder<T, V = T | undefined> {
+export interface PrefBuilder<T, V = T | undefined, O = T> {
   /** Type-only marker for inference. Never set at runtime. */
   readonly '~types'?: PrefTypes<T, V>;
   /** Value used when the cookie is missing or invalid. Removes `undefined` from the read type. */
-  default(value: T): PrefBuilder<T, T>;
+  default(value: O): PrefBuilder<T, O, O>;
   /** Cookie name and attributes for this pref. */
-  options(options: PrefOptions): PrefBuilder<T, V>;
+  options(options: PrefOptions): PrefBuilder<T, V, O>;
 }
 
 /** Builder for `boolean`, `number` and `string` prefs, which can be mirrored on `<html>`. */
