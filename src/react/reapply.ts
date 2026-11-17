@@ -8,9 +8,10 @@ import type { Reflection } from '../reflect';
  */
 export const reapply = (script: string) => {
   try {
-    // The script is fixed source ending in `})(`, then the JSON config, then `)`.
-    // The fixed source contains `})([` only there, so the first match is the boundary.
-    const config = JSON.parse(script.slice(script.indexOf('})([') + 3, -1)) as Reflection[];
+    // The script is fixed source ending in `})(`, then the JSON config inside a string
+    // literal, then `)`. The fixed source holds `})("` only there and the literal escapes
+    // every `"`, so the first match is the boundary.
+    const config = JSON.parse(JSON.parse(script.slice(script.indexOf('})("') + 3, -1))) as Reflection[];
     const h = document.documentElement;
     const cookies = '; ' + document.cookie;
     for (let i = 0, p; (p = config[i++]); )

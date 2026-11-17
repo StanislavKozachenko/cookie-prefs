@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as z from 'zod';
 import { definePrefs, pref, prefsScript, type PrefsRecord } from '../index';
 import { reapply } from './reapply';
@@ -28,6 +28,16 @@ const state = () => ({
 
 /** Run the inline script the way a browser runs it. */
 const runScript = (prefs: PrefsRecord) => new Function(prefsScript(prefs))();
+
+/** Define prefs as in production, where the dev-only check of class names is dropped. */
+const production = (define: () => PrefsRecord) => () => {
+  vi.stubEnv('NODE_ENV', 'production');
+  try {
+    return define();
+  } finally {
+    vi.unstubAllEnvs();
+  }
+};
 
 const hostile = '</script>"})([\' &;=';
 
@@ -63,7 +73,7 @@ const configs: Record<string, () => PrefsRecord> = {
       },
       { prefix: 'p é/' },
     ),
-  'hostile strings': () =>
+  'hostile strings': production(() =>
     definePrefs({
       x: pref
         .enum([hostile, 'b', '__proto__'])
@@ -71,13 +81,24 @@ const configs: Record<string, () => PrefsRecord> = {
         .reflect(['class', 'data-x', '--x'], { b: '<!-- &   -->', ['__proto__']: 'proto' }),
       y: pref.string().default(hostile).reflect(['data-y', '--y']),
     }),
-  'one bad pref': () =>
+  ),
+  // Unmasked: no hostile class aborts the pref before `__proto__` is looked up.
+  '__proto__ enum values': () =>
+    definePrefs({
+      p: pref.enum(['a', '__proto__']).default('a').reflect(['data-p', '--p']),
+      q: pref
+        .enum(['__proto__', 'b'])
+        .default('__proto__')
+        .reflect(['data-q', 'class'], { ['__proto__']: 'proto' }),
+    }),
+  'one bad pref': production(() =>
     definePrefs({
       bad: pref.enum(['a b', 'c']).default('a b').reflect(['data-bad-before', 'class', 'data-bad-after']),
       good: pref.boolean().default(true).reflect('data-good'),
       bad2: pref.enum(['ok', 'x y']).reflect(['class', 'data-bad2']),
       last: pref.number().default(1).reflect('--last'),
     }),
+  ),
 };
 
 /** Cookie states, as raw `document.cookie` writes of encoded names. */
@@ -189,18 +210,33 @@ describe('reapply', () => {
   });
 
   it('never throws, whatever the string', () => {
-    for (const s of ['', 'x', '})(', '})([', '})([1])', '})([null,[1],{"a":1}])', '})({"a":1})', '})([[1,null]])'])
+    for (const s of [
+      '',
+      'x',
+      '})(',
+      '})("',
+      '})("x")',
+      '})("[1]")',
+      '})("[null,[1],{\\"a\\":1}]")',
+      '})("{\\"a\\":1}")',
+      '})("[[1,null]]")',
+      '})([[1,null]])',
+    ])
       expect(() => reapply(s)).not.toThrow();
     expect(html.attributes).toHaveLength(0);
   });
 
-  it('finds the config right after the fixed source, even with `})([` in values', () => {
+  it('finds the config right after the fixed source, even with `})("` in values', () => {
     const plain = prefsScript(configs.plain!());
-    const src = prefsScript(configs['hostile strings']!());
-    const end = src.indexOf('})([') + 3;
-    // The fixed source is the same for every config and holds `})([` only at its end.
-    expect(src.slice(0, end)).toBe(plain.slice(0, plain.indexOf('})([') + 3));
-    expect(src.slice(end)).toContain('})([');
-    expect(JSON.parse(src.slice(end, -1))[0][3]).toBe(hostile);
+    const { z } = definePrefs({ z: pref.string().default('})("x")').reflect('data-z') });
+    const src = prefsScript({ ...configs['hostile strings']!(), z });
+    const end = src.indexOf('})("') + 3;
+    // The fixed source is the same for every config and holds `})("` only at its end;
+    // the string literal after it escapes every `"`.
+    expect(src.slice(0, end)).toBe(plain.slice(0, plain.indexOf('})("') + 3));
+    expect(src.slice(end)).toContain('})(');
+    const config = JSON.parse(JSON.parse(src.slice(end, -1)));
+    expect(config[0][3]).toBe(hostile);
+    expect(config.at(-1)[3]).toBe('})("x")');
   });
 });

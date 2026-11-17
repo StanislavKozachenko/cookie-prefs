@@ -30,6 +30,7 @@ afterEach(() => {
   html.className = '';
   for (const { name } of [...html.attributes]) html.removeAttribute(name);
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
 });
 
 const make = () =>
@@ -90,6 +91,65 @@ describe('get / set / reset', () => {
     expect(prefs.theme.get()).toBe('system');
     expect(prefs.columns.get()).toEqual([]);
     expect(prefs.pageSize.get()).toBe(25);
+  });
+});
+
+describe('sandboxed iframe (document.cookie throws)', () => {
+  const sandbox = () => {
+    const denied = () => {
+      throw new DOMException('The document is sandboxed and lacks the "allow-same-origin" flag.', 'SecurityError');
+    };
+    Object.defineProperty(document, 'cookie', { configurable: true, get: denied, set: denied });
+  };
+
+  it('reads the default and never throws', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const prefs = make();
+    sandbox();
+    const listener = vi.fn();
+    const off = prefs.theme.subscribe(listener);
+    expect(prefs.theme.get()).toBe('system');
+    expect(prefs.columns.get()).toBe(prefs.columns.defaultValue);
+    expect(() => prefs.theme.set('dark')).not.toThrow();
+    expect(() => prefs.theme.set((t) => (t == 'dark' ? 'light' : 'dark'))).not.toThrow();
+    expect(() => prefs.theme.reset()).not.toThrow();
+    expect(prefs.theme.get()).toBe('system');
+    expect(html.className).toBe('system');
+    expect(listener).not.toHaveBeenCalled();
+    off();
+    warn.mockRestore();
+  });
+});
+
+describe('lone surrogates', () => {
+  const text = '😀abc'.slice(1); // lone low surrogate, e.g. a truncated input
+
+  it('set() stores U+FFFD in their place', () => {
+    const prefs = make();
+    expect(() => prefs.locale.set(text)).not.toThrow();
+    expect(prefs.locale.get()).toBe('�abc');
+    expect(html.getAttribute('data-locale')).toBe('�abc');
+    // JSON.stringify escapes lone surrogates, so json prefs keep them as they are
+    prefs.columns.set([text]);
+    expect(prefs.columns.get()).toEqual([text]);
+  });
+
+  it('set() writes nothing and does not throw without String.prototype.toWellFormed', () => {
+    const proto = String.prototype as { toWellFormed?: unknown };
+    const original = proto.toWellFormed;
+    // A no-op rather than deleting it: jsdom's own `document.cookie` setter uses it.
+    proto.toWellFormed = function (this: string) {
+      return String(this);
+    };
+    try {
+      const prefs = make();
+      prefs.locale.set('ok');
+      expect(() => prefs.locale.set(text)).not.toThrow();
+      expect(prefs.locale.get()).toBe('ok');
+      expect(html.getAttribute('data-locale')).toBe('ok');
+    } finally {
+      proto.toWellFormed = original;
+    }
   });
 });
 
@@ -247,9 +307,76 @@ describe('reflection after changes', () => {
     off();
   });
 
-  it('never throws on a value that is not a valid class', () => {
-    const { t } = definePrefs({ t: pref.enum(['a b', 'c']).reflect('class') });
+  it('re-applies on the first subscribe even when the value is the one last seen', () => {
+    const prefs = make();
+    prefs.sidebar.set(false);
+    html.setAttribute('data-sidebar', 'true'); // e.g. React resetting <html> on remount
+    const off = prefs.sidebar.subscribe(() => {});
+    expect(html.getAttribute('data-sidebar')).toBe('false');
+    off();
+  });
+
+  describe('after the DOM moved without this handle (provider re-apply, other tab, server)', () => {
+    /** What another tab plus the provider's re-apply on `visibilitychange` leave behind. */
+    const external = (cookie: string, attr: string, value: string) => {
+      document.cookie = cookie;
+      html.setAttribute(attr, value);
+    };
+
+    it('reflects a toggle with no hook', () => {
+      const prefs = make();
+      prefs.sidebar.set((open) => !open); // this tab collapses
+      expect(html.getAttribute('data-sidebar')).toBe('false');
+      external('sidebar=true', 'data-sidebar', 'true'); // another tab expands
+      prefs.sidebar.set((open) => !open); // collapse again here
+      expect(prefs.sidebar.get()).toBe(false);
+      expect(html.getAttribute('data-sidebar')).toBe('false');
+    });
+
+    it('reflects set() of the value this handle saw last, with no subscriber', () => {
+      const prefs = make();
+      prefs.theme.set('dark');
+      external('theme=light', 'class', 'light');
+      prefs.theme.set('dark');
+      expect(html.className).toBe('is-dark');
+      prefs.theme.reset();
+      external('theme=dark', 'class', 'is-dark');
+      prefs.theme.reset();
+      expect(html.className).toBe('system');
+    });
+
+    it('reflects set() after the last subscriber unmounted', () => {
+      const prefs = make();
+      const off = prefs.pageSize.subscribe(() => {}); // sees 25
+      off();
+      document.cookie = 'pageSize=50';
+      html.style.setProperty('--page-size', '50');
+      prefs.pageSize.set(25);
+      expect(html.style.getPropertyValue('--page-size')).toBe('25');
+    });
+  });
+
+  it('never throws on a value that is not a valid class (production)', () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    const { t, u } = definePrefs({
+      t: pref.enum(['a b', 'c']).reflect('class'),
+      u: pref.enum(['a', 'b']).default('b').reflect('class', { a: '' }),
+    });
     expect(() => t.set('a b')).not.toThrow();
     expect(t.get()).toBe('a b');
+    expect(() => u.set('a')).not.toThrow();
+    expect(u.get()).toBe('a');
+  });
+
+  it('rejects empty classes and classes with whitespace in development', () => {
+    const define = (map: Record<string, string>) => () =>
+      definePrefs({ t: pref.enum(['a', 'b']).reflect(['data-t', 'class'], map) });
+    for (const bad of ['', 'x y', 'x\ty', 'x\n', ' '])
+      expect(define({ a: bad }), JSON.stringify(bad)).toThrow(/t\.reflect\('class'\)/);
+    expect(() => definePrefs({ t: pref.enum(['a b', 'c']).reflect('class') })).toThrow(TypeError);
+    // other targets take any string; valid classes pass
+    expect(() => definePrefs({ t: pref.enum(['a b', '']).reflect(['data-t', '--t']) })).not.toThrow();
+    expect(define({ a: 'x-y', b: 'é ' })).not.toThrow();
+    expect(() => definePrefs({ t: pref.boolean().reflect('data-t') })).not.toThrow();
   });
 });

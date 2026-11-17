@@ -11,7 +11,6 @@ import type { CookieOptions, CookieSource } from './types';
  */
 export const REFLECTION = Symbol.for('prefkit.reflection.1');
 
-const NONE = {};
 const hasDom = () => typeof document != 'undefined';
 
 /** Turn a builder into a `Pref` handle (typed by the caller). */
@@ -23,11 +22,20 @@ export const bind = (key: string, def: Def, prefix: string, options: CookieOptio
   const kind = def.values
     ? Object.fromEntries(def.values.map((v) => [v, def.m?.[v] ?? v]))
     : def.k;
+  // Dev only (dropped from production builds): `classList` rejects an empty token or one
+  // with whitespace, so such a class would never be applied, by the client or the script.
+  if (
+    typeof process == 'object' &&
+    process.env.NODE_ENV != 'production' &&
+    targets?.includes('class') &&
+    Object.values({ ...(kind as object) }).some((c) => !/^[^\t\n\f\r ]+$/.test(c as string))
+  )
+    throw TypeError(`prefkit: ${key}.reflect('class') needs non-empty classes without whitespace`);
   // Parsed value per raw string, so reads are referentially stable. Bounded, since
   // on the server raw strings come from arbitrary requests.
   const cache = new Map<string, unknown>();
   const listeners = new Set<(value: unknown) => void>();
-  let last: unknown = NONE;
+  let last: unknown;
 
   const read = (source: CookieSource): unknown => {
     try {
@@ -48,30 +56,40 @@ export const bind = (key: string, def: Def, prefix: string, options: CookieOptio
 
   let warned = false;
   const get = () => {
-    if (hasDom()) return read(document.cookie);
+    try {
+      return read(document.cookie);
+    } catch {
+      // no DOM, or a sandboxed iframe where reading `document.cookie` throws
+    }
     // Dev only. `process` is checked first so runtimes without it never throw.
     if (typeof process == 'object' && process.env.NODE_ENV != 'production' && !warned) {
       warned = true;
       console.warn(
-        `prefkit: ${key}.get() has no DOM here and returns the default. On the server use read() or getPrefs().`,
+        `prefkit: ${key}.get() cannot read document.cookie here and returns the default. On the server use read() or getPrefs().`,
       );
     }
     return fallback;
   };
 
-  // Notify listeners and update `<html>` when the value differs from the last one seen.
+  // Update `<html>` every time: while nothing subscribes `last` goes stale as the
+  // provider, other tabs or the server move the DOM. Notify only when the value differs.
   const check = () => {
     const value = get();
+    if (targets) apply(targets, kind, domOf(kind, value));
     if (!Object.is(value, last)) {
       last = value;
-      if (targets) apply(targets, kind, domOf(kind, value));
       listeners.forEach((listener) => listener(value));
     }
   };
 
   const write = (value?: string) => {
-    document.cookie = serialize(attrs, value);
-    post();
+    try {
+      document.cookie = serialize(attrs, value);
+      post();
+    } catch {
+      // sandboxed iframe (`document.cookie` throws), or a lone surrogate without
+      // `toWellFormed` (see `serialize`): nothing is written
+    }
     check();
   };
 
@@ -90,7 +108,6 @@ export const bind = (key: string, def: Def, prefix: string, options: CookieOptio
       if (!hasDom()) return () => {};
       if (!listeners.size) {
         hub(check, true);
-        last = NONE;
         check();
       }
       listeners.add(listener);

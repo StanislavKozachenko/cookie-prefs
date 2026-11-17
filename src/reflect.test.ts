@@ -1,5 +1,5 @@
 import { parse } from 'acorn';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as z from 'zod';
 import { definePrefs, pref, prefsScript, type PrefsRecord } from './index';
 
@@ -17,6 +17,7 @@ const resetHtml = () => {
 afterEach(() => {
   clearCookies();
   resetHtml();
+  vi.unstubAllEnvs();
 });
 
 /** Run the generated script the way a browser runs an inline script. */
@@ -125,6 +126,49 @@ describe('prefsScript', () => {
     }
   });
 
+  it('reads an enum value named __proto__ like the client', () => {
+    const prefs = definePrefs({
+      x: pref.enum(['a', '__proto__']).default('a').reflect(['data-x', 'class'], { ['__proto__']: 'proto' }),
+    });
+    for (const cookie of ['x=__proto__', 'x=a', 'x=constructor']) {
+      document.cookie = cookie;
+      resetHtml();
+      run(prefs);
+      const fromScript = state();
+      resetHtml();
+      prefs.x.subscribe(() => {})();
+      expect(state(), cookie).toEqual(fromScript);
+    }
+    document.cookie = 'x=__proto__';
+    run(prefs);
+    expect(state()).toEqual({ class: 'proto', attrs: { class: 'proto', 'data-x': 'proto' } });
+  });
+
+  type Reflectable = { reflect(target: string): ReturnType<typeof pref.string> };
+
+  it('stops a pref at an invalid name or class like the client', () => {
+    vi.stubEnv('NODE_ENV', 'production'); // the dev-only class check would throw first
+    const prefs = definePrefs({
+      a: pref.enum(['x', 'y']).default('x').reflect(['data-before', 'data-bad name', 'data-after']),
+      c: pref.enum(['x', 'y']).default('y').reflect(['data-c', 'class', 'data-c2'], { x: '' }),
+      b: pref.boolean().default(true).reflect('data-b'),
+      // JavaScript callers can reflect any pref to a class; the types allow enums only
+      d: (pref.custom({ parse: (raw) => raw, serialize: String }) as unknown as Reflectable).reflect('class'),
+    });
+    vi.unstubAllEnvs();
+    for (const cookies of [[], ['a=y', 'c=x', 'd=zz'], ['c=y', 'b=false']]) {
+      clearCookies();
+      for (const c of cookies) document.cookie = c;
+      resetHtml();
+      run(prefs);
+      const fromScript = state();
+      resetHtml();
+      for (const p of Object.values(prefs)) p.subscribe(() => {})();
+      expect(state(), cookies.join('; ')).toEqual(fromScript);
+    }
+    expect(state().attrs).toEqual({ 'data-before': 'x', 'data-c': 'y', 'data-b': 'false' });
+  });
+
   it('strips quotes and takes the first duplicate, like the server', () => {
     document.cookie = 'app.locale="fr"';
     run(make());
@@ -139,6 +183,7 @@ describe('prefsScript', () => {
   });
 
   it('never throws, and one bad pref does not stop the others', () => {
+    vi.stubEnv('NODE_ENV', 'production'); // the dev-only class check would throw first
     const prefs = definePrefs({
       bad: pref.enum(['a b', 'c']).default('a b').reflect('class'),
       good: pref.boolean().default(true).reflect('data-good'),
@@ -160,11 +205,11 @@ describe('prefsScript', () => {
       expect(() => parse(prefsScript(prefs), { ecmaVersion: 5, sourceType: 'script' })).not.toThrow();
   });
 
-  it('is fixed code plus JSON config', () => {
+  it('is fixed code plus JSON config in a string literal', () => {
     const src = prefsScript(make());
-    expect(src).toMatch(/^\(function\(P\)\{.*\}catch\(e\)\{\}\}\)\(\[.*\]\)$/);
+    expect(src).toMatch(/^\(function\(P\)\{.*\}catch\(e\)\{\}\}\)\("\[.*\]"\)$/);
     expect(src).not.toContain('function ' + 'anonymous');
-    const config = JSON.parse(src.slice(src.indexOf('})([') + 3, -1)) as unknown[];
+    const config = JSON.parse(JSON.parse(src.slice(src.indexOf('})("') + 3, -1))) as unknown[];
     expect(config).toHaveLength(5);
     expect(config[0]).toEqual(['app.theme', ['class'], { light: 'light', dark: 'is-dark', system: 'system' }, 'system']);
   });
@@ -173,7 +218,8 @@ describe('prefsScript', () => {
     const prefs = makeHostile();
     const src = prefsScript(prefs);
     expect(src).not.toMatch(/[<>\u2028\u2029]/);
-    expect(src.slice(src.indexOf('})(['))).not.toContain('&');
+    expect(src.indexOf('})("')).toBeGreaterThan(0);
+    expect(src.slice(src.indexOf('})("'))).not.toContain('&');
     expect(src).toContain('\\u003c/script\\u003e');
 
     run(prefs);
