@@ -18,8 +18,8 @@ export type Config = [
 export const MEDIA = '(prefers-color-scheme: dark)';
 
 /**
- * Fixed ES5 source of the pre-paint script, called with the `Config` items as
- * arguments. Reads the cookie (or, when it is absent, a next-themes value in
+ * Fixed ES5 source of the pre-paint script, ending in `.apply(0,`: the `Config` items
+ * follow as arguments. Reads the cookie (or, when it is absent, a next-themes value in
  * `localStorage`), validates it, falls back to the default, resolves `'system'`,
  * then writes the class / attributes and `color-scheme` on `<html>`. Never built from
  * `Function.prototype.toString`, so minifiers and `keepNames` cannot break it
@@ -27,17 +27,17 @@ export const MEDIA = '(prefers-color-scheme: dark)';
  * test in `src/theme/__tests__/script.test.tsx`).
  */
 const SOURCE =
-  '(function(k,l,a,m,d,f,s,c){var D=document,h=D.documentElement,o={}.hasOwnProperty,x,i,j;' +
-  "if(!f){x=('; '+D.cookie).split('; '+k+'=')[1];" +
+  '(function(k,l,a,m,d,f,s,c){var h=document.documentElement,x,i,j;' +
+  "if(!f){x=('; '+document.cookie).split('; '+k+'=')[1];" +
   "try{x=x!=null?decodeURIComponent(x.split(';')[0].replace(/^\"(.*)\"$/,'$1')):localStorage.getItem(l)}catch(e){x=null}" +
-  'f=x!=null&&o.call(m,x)?x:d}' +
+  'f=x!=null&&{}.hasOwnProperty.call(m,x)?x:d}' +
   "if(f=='system'&&s)f=matchMedia('" +
   MEDIA +
   "').matches?'dark':'light';" +
-  'x=o.call(m,f)?m[f]:f;' +
+  'x={}.hasOwnProperty.call(m,f)?m[f]:f;' +
   "for(i=0;i<a.length;i++)try{if(a[i]=='class'){for(j in m)h.classList.remove(m[j]);h.classList.add(x)}" +
   'else h.setAttribute(a[i],x)}catch(e){}' +
-  'if(c!=null)h.style.colorScheme=/^(light|dark)$/.test(f)?f:c})';
+  'if(c!=null)h.style.colorScheme=/^(light|dark)$/.test(f)?f:c}).apply(0,';
 
 /**
  * The inline script for a config: fixed code plus the config as JSON, with `<`, `>`,
@@ -46,23 +46,17 @@ const SOURCE =
  */
 export const themeScript = (config: Config): string =>
   SOURCE +
-  '.apply(0,' +
   JSON.stringify(config).replace(
     /[<>&\u2028\u2029]/g,
     (c) => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'),
   ) +
   ')';
 
-/** Own key check; theme names are user input and may be `__proto__` or `toString`. */
-export const has = (map: object, key: string) => Object.prototype.hasOwnProperty.call(map, key);
-
 /** The `prefers-color-scheme` query; `undefined` where `matchMedia` is missing (jsdom). */
 export const media = () => globalThis.matchMedia?.(MEDIA);
 
 /** OS colour scheme; `'light'` where `matchMedia` is missing. */
 export const system = (): 'light' | 'dark' => (media()?.matches ? 'dark' : 'light');
-
-export const LIGHT_DARK = /^(light|dark)$/;
 
 /**
  * Apply a stored theme (already validated, default applied) to `<html>` like the
@@ -73,7 +67,8 @@ export const paint = ([, , attributes, dom, , forced, enableSystem, colorScheme]
   const h = document.documentElement;
   let t = forced || theme;
   if (t == 'system' && enableSystem) t = system();
-  const name = has(dom, t) ? dom[t]! : t;
+  // Own keys only, like the script: theme names may be `__proto__` or `toString`.
+  const name = ({}).hasOwnProperty.call(dom, t) ? dom[t]! : t;
   for (const attribute of attributes)
     try {
       if (attribute == 'class') {
@@ -83,7 +78,7 @@ export const paint = ([, , attributes, dom, , forced, enableSystem, colorScheme]
     } catch {
       // invalid class or attribute name: leave this target as is, like the script
     }
-  if (colorScheme != null) h.style.colorScheme = LIGHT_DARK.test(t) ? t : colorScheme;
+  if (colorScheme != null) h.style.colorScheme = /^(light|dark)$/.test(t) ? t : colorScheme;
 };
 
 /**
@@ -94,13 +89,11 @@ export const paint = ([, , attributes, dom, , forced, enableSystem, colorScheme]
 export const pauseTransitions = (nonce: string | undefined) => {
   const css = document.createElement('style');
   if (nonce) css.setAttribute('nonce', nonce);
-  css.appendChild(document.createTextNode('*,*::before,*::after{transition:none!important}'));
+  css.textContent = '*,*::before,*::after{transition:none!important}';
   document.head.appendChild(css);
   return () => {
     // Read a computed value to force a restyle with transitions off, then re-enable.
-    restyle();
+    void getComputedStyle(document.documentElement).opacity;
     setTimeout(() => css.remove(), 1);
   };
 };
-
-const restyle = () => getComputedStyle(document.documentElement).opacity;

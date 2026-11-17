@@ -5,7 +5,11 @@
  * changed, which also drops the echo of this tab's own writes.
  */
 
-const CHANNEL = 'cookie-prefs';
+/** A channel to the other tabs, when they cannot learn about writes from CookieStore. */
+const open = () =>
+  globalThis.cookieStore || typeof BroadcastChannel != 'function'
+    ? undefined
+    : new BroadcastChannel('cookie-prefs');
 
 /** Re-check functions of prefs that have at least one listener. */
 const subs = new Set<() => void>();
@@ -25,19 +29,17 @@ export const hub = (check: () => void, on: boolean) => {
     if (store) {
       store.addEventListener('change', changed);
       off = () => store.removeEventListener('change', changed);
-    } else if (typeof BroadcastChannel == 'function') {
-      const channel = new BroadcastChannel(CHANNEL);
-      channel.onmessage = changed;
-      off = () => channel.close();
-    } else off = () => {};
+    } else {
+      const channel = open();
+      if (channel) channel.onmessage = changed;
+      off = () => channel?.close();
+    }
   }
 };
 
 /** Tell other tabs a pref changed, when they cannot learn it from CookieStore. */
 export const post = () => {
-  if (!globalThis.cookieStore && typeof BroadcastChannel == 'function') {
-    const channel = new BroadcastChannel(CHANNEL);
-    channel.postMessage(0);
-    channel.close();
-  }
+  const channel = open();
+  channel?.postMessage(0);
+  channel?.close();
 };

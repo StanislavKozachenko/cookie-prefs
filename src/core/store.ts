@@ -11,8 +11,6 @@ import type { CookieInit, CookieOptions, CookieSource, PrefOptions } from './typ
  */
 export const REFLECTION = Symbol.for('cookie-prefs.reflection.1');
 
-const hasDom = () => typeof document != 'undefined';
-
 /** Turn a builder into a `Pref` handle (typed by the caller). */
 export const bind = (key: string, def: Def, prefix: string, options: CookieOptions) => {
   const name = encodeURIComponent(def.o?.name ?? prefix + key);
@@ -101,13 +99,13 @@ export const bind = (key: string, def: Def, prefix: string, options: CookieOptio
     defaultValue: fallback,
     get,
     set: (value: unknown) => {
-      if (hasDom()) write(def.s(typeof value == 'function' ? value(get()) : value));
+      if (typeof document != 'undefined') write(def.s(typeof value == 'function' ? value(get()) : value));
     },
     reset: () => {
-      if (hasDom()) write();
+      if (typeof document != 'undefined') write();
     },
     subscribe: (listener: (value: unknown) => void) => {
-      if (!hasDom()) return () => {};
+      if (typeof document == 'undefined') return () => {};
       if (!listeners.size) {
         hub(check, true);
         check();

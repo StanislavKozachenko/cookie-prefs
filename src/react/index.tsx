@@ -58,7 +58,7 @@ export function usePref<T, V>(pref: Pref<T, V>): [value: V, setValue: PrefSetter
       if (
         current !== undefined &&
         pref.toCookie(current).maxAge > 604800 &&
-        ('; ' + document.cookie).indexOf('; ' + pref.name + '=') >= 0 &&
+        ('; ' + document.cookie).split('; ' + pref.name + '=')[1] != null &&
         pref.read({ [pref.name]: pref.toCookie(current).value }) === (current as unknown)
       )
         pref.set(() => current);
