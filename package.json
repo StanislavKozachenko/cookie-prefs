@@ -92,7 +92,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "size": "size-limit",
-    "check:package": "publint && attw --pack . --profile node16"
+    "check:package": "publint && attw --pack ."
   },
   "size-limit": [
     {
