@@ -111,6 +111,19 @@ describe('cookie names', () => {
     });
   });
 
+  it('reads an undefined prefix or name as not set', () => {
+    const prefs = definePrefs(
+      {
+        a: pref.string().options({ name: undefined }),
+        b: pref.string().options({ name: 'bee' }).options({ name: undefined }),
+      },
+      { prefix: undefined },
+    );
+    expect(prefs.a.name).toBe('a');
+    expect(prefs.b.name).toBe('bee');
+    expect(prefs.b.toCookie('v').name).toBe('bee');
+  });
+
   it('encodes names that are not cookie-safe', () => {
     const { a } = definePrefs({ a: pref.string().options({ name: 'my pref' }) });
     expect(a.name).toBe('my%20pref');
@@ -157,6 +170,35 @@ describe('toCookie', () => {
       secure: false,
       domain: 'x.test',
       partitioned: true,
+    });
+  });
+
+  it('leaves out undefined options, falling back to the next level', () => {
+    const none = {
+      path: undefined,
+      domain: undefined,
+      maxAge: undefined,
+      sameSite: undefined,
+      secure: undefined,
+      partitioned: undefined,
+    };
+    const { a } = definePrefs(
+      { a: pref.string().options({ ...none, name: undefined }) },
+      { ...none, prefix: undefined },
+    );
+    expect(a.toCookie('1')).toStrictEqual({ name: 'a', value: '1', path: '/', maxAge: 34560000, sameSite: 'lax' });
+    const { b } = definePrefs(
+      { b: pref.string().options({ maxAge: 60, domain: 'b.test' }).options({ ...none, name: undefined }) },
+      { prefix: 'app.', path: '/app', sameSite: 'none', secure: true },
+    );
+    expect(b.toCookie('2')).toStrictEqual({
+      name: 'app.b',
+      value: '2',
+      path: '/app',
+      domain: 'b.test',
+      maxAge: 60,
+      sameSite: 'none',
+      secure: true,
     });
   });
 

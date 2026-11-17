@@ -144,7 +144,37 @@ describe('prefsScript', () => {
     expect(state()).toEqual({ class: 'proto', attrs: { class: 'proto', 'data-x': 'proto' } });
   });
 
-  type Reflectable = { reflect(target: string): ReturnType<typeof pref.string> };
+  it('reads enum values named like Object.prototype members like the client', () => {
+    const values = ['toString', 'constructor', 'hasOwnProperty', 'a'] as const;
+    // `as never`: TypeScript rejects a map without these keys, since it sees the inherited
+    // `toString` of `{ a: 'A' }`; JavaScript callers can still pass one.
+    for (const map of [undefined, { a: 'A' } as never]) {
+      const prefs = definePrefs({
+        m: pref.enum(values).default('a').reflect(['data-m', '--m'], map),
+        c: pref.enum(values).default('a').reflect('class', map),
+      });
+      for (const v of [...values, 'valueOf']) {
+        document.cookie = `m=${v}`;
+        document.cookie = `c=${v}`;
+        resetHtml();
+        run(prefs);
+        const fromScript = state();
+        resetHtml();
+        Object.values(prefs).forEach((p) => p.subscribe(() => {})());
+        expect(state(), `${v}, ${map ? 'map' : 'no map'}`).toEqual(fromScript);
+      }
+      document.cookie = 'm=toString';
+      document.cookie = 'c=constructor';
+      resetHtml();
+      run(prefs);
+      expect(state()).toEqual({
+        class: 'constructor',
+        attrs: { class: 'constructor', 'data-m': 'toString', style: '--m: toString;' },
+      });
+    }
+  });
+
+  type Reflectable ={ reflect(target: string): ReturnType<typeof pref.string> };
 
   it('stops a pref at an invalid name or class like the client', () => {
     vi.stubEnv('NODE_ENV', 'production'); // the dev-only class check would throw first

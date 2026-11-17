@@ -7,7 +7,6 @@ import type { CookieGetter, CookieInit, CookieOptions, CookieSource } from './ty
  * browsers. May throw on a malformed value; callers fall back to the default.
  */
 export const rawOf = (source: CookieSource, name: string): string | undefined => {
-  if (source == null) return;
   if (typeof source == 'string') {
     for (const part of source.split(';')) {
       const i = part.indexOf('=');
@@ -21,10 +20,19 @@ export const rawOf = (source: CookieSource, name: string): string | undefined =>
     }
     return;
   }
-  return typeof source.get == 'function'
+  // null and undefined read as no cookies
+  return typeof source?.get == 'function'
     ? (source as CookieGetter).get(name)?.value
-    : (source as Record<string, string | undefined>)[name];
+    : (source as Record<string, string | undefined> | null | undefined)?.[name];
 };
+
+/**
+ * Own enumerable properties of `sources`, later ones winning, like a spread, except that
+ * an `undefined` (or `null`) value means "not set" and keeps the value from the sources
+ * before.
+ */
+export const merge = <T extends object>(...sources: (T | undefined)[]): T =>
+  Object.fromEntries(sources.flatMap((s) => Object.entries({ ...s }).filter((e) => e[1] != null))) as T;
 
 /** Default cookie attributes. */
 export const defaults = { path: '/', maxAge: 34560000, sameSite: 'lax' } as const;
