@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as z from 'zod';
-import { rawOf } from './cookie';
+import { rawOf } from './core/cookie';
 import { definePrefs, pref, readPrefs, snapshotPrefs } from './index';
 
 describe('rawOf: Cookie header', () => {

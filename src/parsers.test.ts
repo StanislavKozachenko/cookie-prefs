@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as z from 'zod';
 import { definePrefs, pref } from './index';
-import type { StandardSchemaV1 } from './standard-schema';
+import type { StandardSchemaV1 } from './core/standard-schema';
 
 // Reads go through a plain map, so these tests exercise only the parsers.
 const one = <T, V>(builder: { readonly '~types'?: { value: T; output: V } }) => {

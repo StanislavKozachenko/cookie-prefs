@@ -1,8 +1,8 @@
-import { builder, type Def } from './builder';
-import { rawOf } from './cookie';
-import { script, type Reflection } from './reflect';
-import type { InferSchemaInput, InferSchemaOutput, StandardSchemaV1 } from './standard-schema';
-import { bind, REFLECTION } from './store';
+import { builder, type Def } from './core/builder';
+import { rawOf } from './core/cookie';
+import { script, type Reflection } from './core/reflect';
+import type { InferSchemaInput, InferSchemaOutput, StandardSchemaV1 } from './core/standard-schema';
+import { bind, REFLECTION } from './core/store';
 import type {
   CookieSource,
   EnumPrefBuilder,
@@ -15,7 +15,7 @@ import type {
   PrefsSnapshot,
   PrefValues,
   ScalarPrefBuilder,
-} from './types';
+} from './core/types';
 
 export type {
   AnyPref,
@@ -42,8 +42,8 @@ export type {
   PrefValues,
   ReflectTarget,
   ScalarPrefBuilder,
-} from './types';
-export type { StandardSchemaV1 } from './standard-schema';
+} from './core/types';
+export type { StandardSchemaV1 } from './core/standard-schema';
 
 /** Pref builders. Each returns an immutable builder to pass to `definePrefs()`. */
 export interface PrefFactory {
