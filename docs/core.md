@@ -35,7 +35,12 @@ response.cookies.set(prefs.density.toCookie('compact'))
 
 Clearing is `reset()`, never `set(undefined)`. `set()` and `reset()` do nothing on the server and `get()` returns the default there: use `read()` or `getPrefs()` instead.
 
-`toCookie()` returns the cookie as `{ name, value, path, maxAge, sameSite, ... }`, which Next.js `cookies().set()` accepts. Its `value` is not URI-encoded: frameworks encode on set, but if you write a raw `Set-Cookie` header yourself, pass the value through `encodeURIComponent`.
+`toCookie()` returns the cookie as `{ name, value, path, maxAge, sameSite, ... }`, which Next.js `cookies().set()` accepts. Its `value` is not URI-encoded: frameworks encode on set, but if you write a raw `Set-Cookie` header yourself, pass the value through `encodeURIComponent`. `maxAge` is in seconds, like the `Max-Age` attribute; Express `res.cookie` takes milliseconds, so multiply it there:
+
+```ts
+const { name, value, maxAge, ...options } = prefs.density.toCookie('compact')
+res.cookie(name, value, { ...options, maxAge: maxAge * 1000 })
+```
 
 ## Cookie options and defaults
 
