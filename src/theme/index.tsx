@@ -109,8 +109,8 @@ const subscribeSystem = (onChange: () => void) => {
 
 const none = () => undefined;
 
-/** Whether `document.cookie` holds a cookie of this (encoded) name, valid or not. */
-const exists = (name: string) => ('; ' + document.cookie).split('; ' + name + '=')[1] != null;
+/** Text of the cookie of this (encoded) name as stored, valid or not; `undefined` when absent. */
+const textOf = (name: string) => ('; ' + document.cookie).split('; ' + name + '=')[1]?.split(';')[0];
 
 /** Theme cookie names already checked for a refresh in this page load. */
 const seen = new Set<string>();
@@ -124,8 +124,11 @@ const seen = new Set<string>();
  * Safari caps cookies written by scripts at 7 days, so once per page load the
  * provider re-writes an existing theme cookie: the choice lasts 7 days after the
  * last visit there, not after the last change. Only when `cookie.maxAge` is longer
- * than 7 days, so a shorter lifetime still ends on time. A cookie set by the server
- * (`Set-Cookie`, e.g. middleware) is not capped until the provider re-writes it.
+ * than 7 days, so a shorter lifetime still ends on time, and only when the cookie
+ * holds a listed theme exactly as the provider writes it: a theme it does not list
+ * (another subdomain's, a newer release's) is left alone until `setTheme()`. A
+ * cookie set by the server (`Set-Cookie`, e.g. middleware) is not capped until the
+ * provider re-writes it.
  * @example
  * <html lang="en" suppressHydrationWarning>
  *   <body>
@@ -213,19 +216,24 @@ function Theme({
       // One-time move from next-themes: no cookie yet, a valid name in localStorage. The
       // value is removed once the cookie holds it (or when it is invalid), so a later
       // missing cookie never brings it back.
-      if (!exists(handle.name)) {
+      const text = textOf(handle.name);
+      if (text == null) {
         const stored = localStorage.getItem(config[1]);
         if (stored != null) {
           const valid = ({}).hasOwnProperty.call(config[3], stored);
           if (valid) handle.set(stored);
           // Kept when the write did not stick (cookies blocked): nothing is lost.
-          if (!valid || exists(handle.name)) localStorage.removeItem(config[1]);
+          if (!valid || textOf(handle.name) != null) localStorage.removeItem(config[1]);
         }
       }
       // Safari caps script-written cookies at 7 days: re-write an existing cookie once
-      // per page load, so the window slides with visits. Same value: no notification.
-      // Only one meant to outlive the cap, or a shorter one would never expire.
-      else if (once && handle.toCookie(handle.get()).maxAge > 604800) handle.set(handle.get());
+      // per page load, so the window slides with visits. Only when it holds the very
+      // text the write produces: an unknown theme (another subdomain's, a newer
+      // release's) reads as the default here and must not be overwritten. Same value:
+      // no notification. Only one meant to outlive the cap, or a shorter one would
+      // never expire.
+      else if (once && text == encodeURIComponent(handle.get()) && handle.toCookie(handle.get()).maxAge > 604800)
+        handle.set(handle.get());
     } catch {
       // storage or cookies unavailable: keep the default
     }

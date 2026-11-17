@@ -620,6 +620,34 @@ describe('refresh against Safari’s 7-day cap on script-written cookies', () =>
     expect(current.theme).toBe('dark');
   });
 
+  it('leaves a theme this provider does not list alone until the user picks one', () => {
+    // Another subdomain sharing the cookie (`cookie={{ domain }}`) lists `sepia`, or a
+    // newer release did before a rollback: it reads as the default here.
+    document.cookie = 'r8=sepia';
+    const write = writes();
+    render(app({ storageKey: 'r8', defaultTheme: 'light', enableSystem: false }));
+    expect(write).not.toHaveBeenCalled();
+    expect(document.cookie).toBe('r8=sepia');
+    expect(current.theme).toBe('light');
+    expect(html.getAttribute('data-theme')).toBe('light');
+    set('dark');
+    expect(document.cookie).toBe('r8=dark');
+  });
+
+  it('re-writes only a cookie that holds exactly the text it would write', () => {
+    // Same theme in another spelling, or no valid theme at all: left as stored.
+    const kept = ['r10="dark"', 'r11=%64ark', 'r12=%E0%A4%A', 'r13=', 'r14=__proto__', 'r15=high contrast'];
+    for (const cookie of kept) document.cookie = cookie;
+    document.cookie = 'r16=high%20contrast';
+    const write = writes();
+    for (const cookie of [...kept, 'r16']) {
+      render(app({ storageKey: cookie.split('=')[0], themes: ['dark', 'high contrast'] }));
+      act(() => root!.unmount());
+    }
+    expect(write.mock.calls).toEqual([['r16=high%20contrast; Path=/; Max-Age=34560000; SameSite=lax']]);
+    for (const cookie of kept) expect(document.cookie).toContain(cookie);
+  });
+
   it('never creates a missing cookie', () => {
     const write = writes();
     render(app({ storageKey: 'r3' }));
