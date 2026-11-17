@@ -123,8 +123,9 @@ const seen = new Set<string>();
  *
  * Safari caps cookies written by scripts at 7 days, so once per page load the
  * provider re-writes an existing theme cookie: the choice lasts 7 days after the
- * last visit there, not after the last change. A cookie set by the server
- * (`Set-Cookie`, e.g. middleware) is not capped.
+ * last visit there, not after the last change. Only when `cookie.maxAge` is longer
+ * than 7 days, so a shorter lifetime still ends on time. A cookie set by the server
+ * (`Set-Cookie`, e.g. middleware) is not capped until the provider re-writes it.
  * @example
  * <html lang="en" suppressHydrationWarning>
  *   <body>
@@ -219,7 +220,8 @@ function Theme({
       }
       // Safari caps script-written cookies at 7 days: re-write an existing cookie once
       // per page load, so the window slides with visits. Same value: no notification.
-      else if (once) handle.set(handle.get());
+      // Only one meant to outlive the cap, or a shorter one would never expire.
+      else if (once && handle.toCookie(handle.get()).maxAge > 604800) handle.set(handle.get());
     } catch {
       // storage or cookies unavailable: keep the default
     }

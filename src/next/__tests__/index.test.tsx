@@ -1,8 +1,9 @@
+import { readFileSync } from 'node:fs';
 import {
   createRequestStore,
   synchronizeMutableCookies,
 } from 'next/dist/server/async-storage/request-store';
-import { cookies, headers } from 'next/headers';
+import { cookies, headers } from 'next/headers.js';
 // The store class behind `cookies()`: next/dist/server/async-storage/request-store.js
 // builds it from the same request headers.
 import { RequestCookies } from 'next/dist/server/web/spec-extension/cookies';
@@ -13,7 +14,7 @@ import { PrefsProvider as ClientPrefsProvider, usePref } from '../../react/index
 import * as entry from '../index';
 import { getPrefs, PrefsProvider } from '../index';
 
-vi.mock('next/headers', () => ({ cookies: vi.fn(), headers: vi.fn() }));
+vi.mock('next/headers.js', () => ({ cookies: vi.fn(), headers: vi.fn() }));
 
 /**
  * Mock `headers()` and `cookies()` with the request store the installed Next builds
@@ -258,5 +259,14 @@ describe('the cookies() store of the installed next', () => {
     expect(await getPrefs(prefs)).toMatchObject({ theme: 'light', locale: 'de' });
     expect(prefs.theme.read(store)).toBe('dark');
     expect(prefs.locale.read(store)).toBe('"de"');
+  });
+});
+
+describe('imports', () => {
+  // next has no `exports` map, so plain Node ESM (and vitest in a consumer project,
+  // where prefkit is not bundled) only resolves its subpaths with the file extension.
+  it('imports next/headers.js, with the extension', () => {
+    const source = readFileSync('src/next/index.tsx', 'utf8');
+    expect(source.match(/from '(next\/[^']*)'/g)).toEqual(["from 'next/headers.js'"]);
   });
 });

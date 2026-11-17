@@ -1,4 +1,4 @@
-import { cookies, headers } from 'next/headers';
+import { cookies, headers } from 'next/headers.js';
 import { prefsScript, readPrefs, snapshotPrefs } from 'prefkit';
 import { PrefsProvider as ClientPrefsProvider } from 'prefkit/react';
 import type { ReactElement, ReactNode } from 'react';

@@ -232,6 +232,24 @@ describe('usePref refresh against Safari’s 7-day cap on script-written cookies
     expect(write).toHaveBeenCalledTimes(2);
   });
 
+  it('re-writes only cookies that live longer than 7 days', () => {
+    const prefs = definePrefs({
+      day: pref.boolean().default(false).options({ maxAge: 86400 }), // "snooze for a day"
+      week: pref.boolean().default(false).options({ maxAge: 604800 }),
+      longer: pref.boolean().default(false).options({ maxAge: 604801 }),
+      kept: pref.boolean().default(false), // 400 days
+    });
+    for (const name of Object.keys(prefs)) document.cookie = name + '=true';
+    const write = writes();
+    const probes = Object.values(prefs).map((handle) => probe(handle));
+    const el = render(probes.map(({ Probe }, i) => <Probe key={i} />));
+    expect(el.textContent).toBe('truetruetruetrue');
+    expect(write.mock.calls).toEqual([
+      ['longer=true; Path=/; Max-Age=604801; SameSite=lax'],
+      ['kept=true' + attrs],
+    ]);
+  });
+
   it('never creates a missing cookie', () => {
     const prefs = make();
     const write = writes();
