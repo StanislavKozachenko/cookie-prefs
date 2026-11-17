@@ -663,5 +663,22 @@ describe('next-themes regressions', () => {
       expect(errors).not.toHaveBeenCalled();
       expect(recoverable).not.toHaveBeenCalled();
     });
+
+    it('keeps the first script text when props change after hydration (forcedTheme per route)', async () => {
+      document.cookie = 'theme=light';
+      const node = (forcedTheme?: string) => app({ attribute: 'class', forcedTheme });
+      const markup = serve(node());
+      restore = blockScriptText();
+      const { container, errors, recoverable } = await hydrate(node(), markup);
+      const text = container.querySelector('script')!.textContent;
+      rerender(node('dark')); // navigate to a page with a forced theme
+      expect(html.className).toBe('dark');
+      expect(current.forcedTheme).toBe('dark');
+      rerender(node());
+      expect(html.className).toBe('light');
+      expect(container.querySelector('script')!.textContent).toBe(text);
+      expect(errors).not.toHaveBeenCalled();
+      expect(recoverable).not.toHaveBeenCalled();
+    });
   });
 });

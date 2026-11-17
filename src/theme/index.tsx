@@ -6,6 +6,7 @@ import {
   useLayoutEffect,
   useMemo,
   useReducer,
+  useState,
   useSyncExternalStore,
   type DetailedHTMLProps,
   type Dispatch,
@@ -145,6 +146,10 @@ function Theme({
     enableColorScheme ? (LIGHT_DARK.test(defaultTheme) ? defaultTheme : '') : null,
   ];
   const script = themeScript(fresh);
+  // Only the first script is rendered: it ran (or not) when the page was parsed, the
+  // client copy is inert, and new text on a hydrated script is an `innerHTML` write
+  // that enforced Trusted Types reject. The live config below drives the client.
+  const [first] = useState(script);
   // Inline `themes` and `value` literals are new objects on every render, so the store,
   // the config and the setter are keyed on the script, which encodes all of them.
   const [handle, config, themeList, setTheme] = useMemo(() => {
@@ -224,7 +229,7 @@ function Theme({
         type={server ? 'text/javascript' : 'text/plain'}
         nonce={server ? nonce : undefined}
         suppressHydrationWarning
-        dangerouslySetInnerHTML={{ __html: script }}
+        dangerouslySetInnerHTML={{ __html: first }}
       />
       {children}
     </Context.Provider>
