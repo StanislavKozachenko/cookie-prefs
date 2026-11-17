@@ -4,7 +4,7 @@ import {
 } from 'next/dist/server/async-storage/request-store';
 import { cookies, headers } from 'next/headers.js';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { definePrefs, pref, readPrefs, snapshotPrefs, type PrefsSnapshot } from '../../index';
+import { definePrefs, pref, readPrefs, snapshotPrefs, type PrefsRecord, type PrefsSnapshot } from '../../index';
 import { getPrefs, PrefsProvider } from '../index';
 
 // Attacks on the hybrid read of `cookie-prefs/next`: it parses the raw `Cookie` header
@@ -49,7 +49,7 @@ const make = () =>
     size: pref.number().default(1).options({ name: 'my size' }),
   });
 
-const serverSnapshot = async (prefs: ReturnType<typeof make>) =>
+const serverSnapshot = async (prefs: PrefsRecord) =>
   ((await PrefsProvider({ prefs, mode: 'server' })).props as { snapshot: PrefsSnapshot }).snapshot;
 
 const random = (seed: number) => () => {
@@ -165,6 +165,22 @@ describe('same-request writes that differ from the header only by encoding or qu
       (await cookies()).delete('them');
     });
     expect(await getPrefs(prefs)).toMatchObject({ theme: 'dark', the: 'x' });
+  });
+
+  it('a pref whose cookie is named `__proto__` sees same-request writes and deletes', async () => {
+    const prefs = definePrefs({ p: pref.string().options({ name: '__proto__' }) });
+    for (const header of ['', '__proto__=old']) {
+      await request(header, async () => {
+        (await cookies()).set(prefs.p.toCookie('new'));
+      });
+      expect(await getPrefs(prefs), header).toEqual({ p: 'new' });
+      expect(Object.keys(await serverSnapshot(prefs)), header).toEqual(['__proto__']);
+      await request(header, async () => {
+        (await cookies()).delete(prefs.p.name);
+      });
+      expect(await getPrefs(prefs), header).toEqual({ p: undefined });
+      expect(await serverSnapshot(prefs), header).toEqual({});
+    }
   });
 
   it('a write of an encoded pref name lands on that pref only', async () => {

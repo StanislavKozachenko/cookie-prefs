@@ -15,7 +15,7 @@ import type { PrefsRecord, PrefsSnapshot, PrefValues } from '../core/types';
 const requestSnapshot = async (prefs: PrefsRecord): Promise<PrefsSnapshot> => {
   const header = (await headers()).get('cookie') ?? '';
   const store = await cookies();
-  const snapshot = snapshotPrefs(prefs, header) as Record<string, string>;
+  let snapshot = snapshotPrefs(prefs, header) as Record<string, string>;
   for (const { name } of Object.values(prefs)) {
     const value = store.get(name)?.value;
     const key = name + '=';
@@ -31,7 +31,8 @@ const requestSnapshot = async (prefs: PrefsRecord): Promise<PrefsSnapshot> => {
         }
       })
     ) {
-      if (value) snapshot[name] = value;
+      // a spread, not an assignment: a cookie named `__proto__` is an own key too
+      if (value) snapshot = { ...snapshot, [name]: value };
       else delete snapshot[name];
     }
   }
