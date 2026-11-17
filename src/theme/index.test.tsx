@@ -423,9 +423,37 @@ describe('next-themes migration', () => {
     expect(cookie('theme')).toBe('dark');
     expect(current.theme).toBe('dark');
     expect(html.getAttribute('data-theme')).toBe('dark');
+    expect(localStorage.getItem('theme')).toBeNull();
     set('light');
     expect(cookie('theme')).toBe('light');
-    expect(localStorage.getItem('theme')).toBe('dark'); // left for a rollback
+  });
+
+  it('runs once: a stale value never comes back when the cookie goes away later', () => {
+    localStorage.setItem('theme', 'dark');
+    render(app());
+    set('light'); // the user's newer choice
+    act(() => root!.unmount());
+    clearCookies(); // expiry, Safari's cap on script-written cookies, cleared cookies
+    render(app());
+    expect(current.theme).toBe('system');
+    expect(document.cookie).toBe('');
+  });
+
+  it('keeps the value when the cookie write does not stick (cookies blocked)', () => {
+    localStorage.setItem('theme', 'dark');
+    vi.spyOn(Document.prototype, 'cookie', 'set').mockImplementation(() => {});
+    render(app());
+    expect(localStorage.getItem('theme')).toBe('dark');
+  });
+
+  it('still migrates when removing the value throws', () => {
+    localStorage.setItem('theme', 'dark');
+    vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
+      throw new DOMException('denied', 'SecurityError');
+    });
+    render(app());
+    expect(cookie('theme')).toBe('dark');
+    expect(current.theme).toBe('dark');
   });
 
   it('uses the storageKey for both', () => {
@@ -434,11 +462,12 @@ describe('next-themes migration', () => {
     expect(cookie('my-theme')).toBe('dark');
   });
 
-  it('ignores an invalid value', () => {
+  it('ignores and removes an invalid value', () => {
     localStorage.setItem('theme', 'blue');
     render(app());
     expect(document.cookie).toBe('');
     expect(current.theme).toBe('system');
+    expect(localStorage.getItem('theme')).toBeNull();
   });
 
   it('never overrides an existing cookie', () => {

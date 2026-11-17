@@ -41,7 +41,8 @@ export interface ThemeProviderProps {
   enableColorScheme?: boolean | undefined;
   /**
    * Cookie name that stores the choice. A value left in `localStorage` under the same
-   * key by next-themes is moved to the cookie once. @default 'theme'
+   * key by next-themes is moved to the cookie once and removed from `localStorage`, so
+   * rolling back to next-themes starts from its default. @default 'theme'
    */
   storageKey?: string | undefined;
   /** Theme when nothing is stored. @default enableSystem ? 'system' : 'light' */
@@ -97,6 +98,9 @@ const subscribeSystem = (onChange: () => void) => {
 };
 
 const none = () => undefined;
+
+/** Whether `document.cookie` holds a cookie of this (encoded) name, valid or not. */
+const exists = (name: string) => ('; ' + document.cookie).indexOf('; ' + name + '=') >= 0;
 
 /**
  * Drop-in replacement for next-themes `ThemeProvider`, stored in a cookie so the
@@ -178,12 +182,18 @@ function Theme({
   // (Strict Mode), and on every change. It reads the current cookie, never rendered
   // state, so re-running on an <Activity> reveal cannot bring an old theme back.
   useLayout(() => {
-    // One-time move from next-themes: no cookie yet, a valid name in localStorage.
-    // After the first write the cookie exists and this is a string search.
+    // One-time move from next-themes: no cookie yet, a valid name in localStorage. The
+    // value is removed once the cookie holds it (or when it is invalid), so a later
+    // missing cookie never brings it back. Otherwise this is a string search.
     try {
-      if (('; ' + document.cookie).indexOf('; ' + handle.name + '=') < 0) {
+      if (!exists(handle.name)) {
         const stored = localStorage.getItem(config[1]);
-        if (stored != null && has(config[3], stored)) handle.set(stored);
+        if (stored != null) {
+          const valid = has(config[3], stored);
+          if (valid) handle.set(stored);
+          // Kept when the write did not stick (cookies blocked): nothing is lost.
+          if (!valid || exists(handle.name)) localStorage.removeItem(config[1]);
+        }
       }
     } catch {
       // storage unavailable: keep the default
