@@ -30,9 +30,11 @@ const seen = new WeakSet<object>();
  *
  * Safari caps cookies written by scripts at 7 days, whatever `maxAge` says. So once
  * per page load the hook re-writes the pref's cookie when it already exists, with the
- * same value: the 7 days then count from the last visit, not the last change. A pref
- * no hook uses is refreshed only by `set()`. A cookie set by the server (`Set-Cookie`,
- * e.g. middleware writing `pref.toCookie(value)`) is not capped.
+ * same value: the 7 days then count from the last visit, not the last change. Only a
+ * pref whose `maxAge` is longer than 7 days is refreshed, so a short-lived one still
+ * expires on time. A pref no hook uses is refreshed only by `set()`. A cookie set by
+ * the server (`Set-Cookie`, e.g. middleware writing `pref.toCookie(value)`) is not
+ * capped.
  * @example
  * const [sidebar, setSidebar] = usePref(prefs.sidebar)
  * <button onClick={() => setSidebar((open) => !open)}>Toggle</button>
@@ -49,10 +51,12 @@ export function usePref<T, V>(pref: Pref<T, V>): [value: V, setValue: PrefSetter
     seen.add(pref);
     try {
       const current = pref.get() as unknown as T;
-      // Only an existing cookie, and only when writing it back yields the very same
-      // value (same object for json and custom prefs), so the store notifies nobody.
+      // Only an existing cookie meant to outlive the cap (a shorter one would never
+      // expire for a regular visitor), and only when writing it back yields the very
+      // same value (same object for json and custom prefs), so the store notifies nobody.
       if (
         current !== undefined &&
+        pref.toCookie(current).maxAge > 604800 &&
         ('; ' + document.cookie).indexOf('; ' + pref.name + '=') >= 0 &&
         pref.read({ [pref.name]: pref.toCookie(current).value }) === (current as unknown)
       )
