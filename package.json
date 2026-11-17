@@ -92,6 +92,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "size": "size-limit",
+    "e2e": "node e2e/scripts/run.mjs",
     "check:package": "publint && attw --pack .",
     "prepublishOnly": "npm run lint && npm run typecheck && npm run build && npm test && npm run check:package && npm run size"
   },
