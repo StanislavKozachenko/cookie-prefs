@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import {
   createRequestStore,
   synchronizeMutableCookies,
@@ -258,5 +259,14 @@ describe('the cookies() store of the installed next', () => {
     expect(await getPrefs(prefs)).toMatchObject({ theme: 'light', locale: 'de' });
     expect(prefs.theme.read(store)).toBe('dark');
     expect(prefs.locale.read(store)).toBe('"de"');
+  });
+});
+
+describe('imports', () => {
+  // next has no `exports` map, so plain Node ESM (and vitest in a consumer project,
+  // where prefkit is not bundled) only resolves its subpaths with the file extension.
+  it('imports next/headers.js, with the extension', () => {
+    const source = readFileSync('src/next/index.tsx', 'utf8');
+    expect(source.match(/from '(next\/[^']*)'/g)).toEqual(["from 'next/headers.js'"]);
   });
 });
