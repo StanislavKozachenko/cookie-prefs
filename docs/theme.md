@@ -1,17 +1,17 @@
 # Theme preset and migration from next-themes
 
-`prefkit/theme`: an API-compatible replacement for next-themes that stores the choice in a cookie. Back to the [README](../README.md).
+`cookie-prefs/theme`: an API-compatible replacement for next-themes that stores the choice in a cookie. Back to the [README](../README.md).
 
 ## Migration
 
 ```diff
 - import { ThemeProvider, useTheme } from 'next-themes'
-+ import { ThemeProvider, useTheme } from 'prefkit/theme'
++ import { ThemeProvider, useTheme } from 'cookie-prefs/theme'
 ```
 
 ```tsx
 // app/layout.tsx
-import { ThemeProvider } from 'prefkit/theme'
+import { ThemeProvider } from 'cookie-prefs/theme'
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -28,7 +28,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
 ```tsx
 'use client'
-import { useTheme } from 'prefkit/theme'
+import { useTheme } from 'cookie-prefs/theme'
 
 export function ThemeToggle() {
   const { theme, resolvedTheme, setTheme } = useTheme()

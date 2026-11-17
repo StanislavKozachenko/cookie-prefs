@@ -132,8 +132,8 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.value }}
         run: |
-          if [ -n "$(npm view "prefkit@${VERSION}" version 2>/dev/null)" ]; then
-            echo "prefkit@${VERSION} is already on npm, skipping publish"
+          if [ -n "$(npm view "cookie-prefs@${VERSION}" version 2>/dev/null)" ]; then
+            echo "cookie-prefs@${VERSION} is already on npm, skipping publish"
           else
             # The checks and the build already ran above, so skip the prepublishOnly hook
             npm publish --provenance --ignore-scripts

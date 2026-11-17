@@ -9,7 +9,7 @@ import type { CookieInit, CookieOptions, CookieSource, PrefOptions } from './typ
  * global symbol, not in a module-level map, so a second copy of the core (ESM + CJS,
  * two versions) reads it too. Bump the suffix when the `Reflection` layout changes.
  */
-export const REFLECTION = Symbol.for('prefkit.reflection.1');
+export const REFLECTION = Symbol.for('cookie-prefs.reflection.1');
 
 const hasDom = () => typeof document != 'undefined';
 
@@ -32,7 +32,7 @@ export const bind = (key: string, def: Def, prefix: string, options: CookieOptio
     targets?.includes('class') &&
     Object.values({ ...(kind as object) }).some((c) => !/^[^\t\n\f\r ]+$/.test(c as string))
   )
-    throw TypeError(`prefkit: ${key}.reflect('class') needs non-empty classes without whitespace`);
+    throw TypeError(`cookie-prefs: ${key}.reflect('class') needs non-empty classes without whitespace`);
   // Parsed value per raw string, so reads are referentially stable. Bounded, since
   // on the server raw strings come from arbitrary requests.
   const cache = new Map<string, unknown>();
@@ -67,7 +67,7 @@ export const bind = (key: string, def: Def, prefix: string, options: CookieOptio
     if (typeof process == 'object' && process.env.NODE_ENV != 'production' && !warned) {
       warned = true;
       console.warn(
-        `prefkit: ${key}.get() cannot read document.cookie here and returns the default. On the server use read() or getPrefs().`,
+        `cookie-prefs: ${key}.get() cannot read document.cookie here and returns the default. On the server use read() or getPrefs().`,
       );
     }
     return fallback;

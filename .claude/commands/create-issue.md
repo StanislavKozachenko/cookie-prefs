@@ -1,4 +1,4 @@
-Create a GitHub issue for the prefkit project following the project's established conventions.
+Create a GitHub issue for the cookie-prefs project following the project's established conventions.
 
 ## Issue format
 

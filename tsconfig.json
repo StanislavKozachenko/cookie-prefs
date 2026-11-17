@@ -13,8 +13,8 @@
     "skipLibCheck": true,
     "noEmit": true,
     "paths": {
-      "prefkit": ["./src/index.ts"],
-      "prefkit/react": ["./src/react/index.tsx"]
+      "cookie-prefs": ["./src/index.ts"],
+      "cookie-prefs/react": ["./src/react/index.tsx"]
     }
   },
   "include": ["src", "*.config.ts"]

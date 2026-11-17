@@ -53,7 +53,7 @@ export interface CookieInit {
   /**
    * Serialized value, NOT URI-encoded: frameworks encode it on set (Next.js, Express
    * `res.cookie`). When writing a raw `Set-Cookie` header yourself, pass it through
-   * `encodeURIComponent`, or prefkit reads it as invalid and falls back to the default.
+   * `encodeURIComponent`, or cookie-prefs reads it as invalid and falls back to the default.
    */
   value: string;
   path: string;
@@ -74,7 +74,7 @@ export interface CookieGetter {
  * a `Cookie` header string, a cookie store with `get(name)` (Next.js `cookies()`,
  * `NextRequest.cookies`), or a plain name-to-value map. `null` and `undefined` read
  * as "no cookies", so every pref resolves to its default. A header string is
- * URI-decoded by prefkit; stores and maps must already hold URI-decoded values, as
+ * URI-decoded by cookie-prefs; stores and maps must already hold URI-decoded values, as
  * Next.js, Express and `snapshotPrefs()` do. Keys are cookie names (`Pref.name`).
  */
 export type CookieSource =
@@ -159,7 +159,7 @@ export interface EnumPrefBuilder<T extends string, V = T | undefined> extends Pr
 export interface PrefCodec<T> {
   /** Raw cookie value (already URI-decoded) to a value. Return `undefined` or throw to fall back to the default. */
   parse(raw: string): T | undefined;
-  /** Value to the raw cookie string (URI-encoded by prefkit). */
+  /** Value to the raw cookie string (URI-encoded by cookie-prefs). */
   serialize(value: T): string;
 }
 

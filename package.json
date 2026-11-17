@@ -1,5 +1,5 @@
 {
-  "name": "prefkit",
+  "name": "cookie-prefs",
   "version": "0.0.0",
   "description": "Typed cookie-backed user preference state for React and Next.js",
   "keywords": [
@@ -14,13 +14,13 @@
   ],
   "license": "MIT",
   "author": "Stanislav Kozachenko",
-  "homepage": "https://github.com/StanislavKozachenko/prefkit#readme",
+  "homepage": "https://github.com/StanislavKozachenko/cookie-prefs#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/StanislavKozachenko/prefkit.git"
+    "url": "git+https://github.com/StanislavKozachenko/cookie-prefs.git"
   },
   "bugs": {
-    "url": "https://github.com/StanislavKozachenko/prefkit/issues"
+    "url": "https://github.com/StanislavKozachenko/cookie-prefs/issues"
   },
   "type": "module",
   "sideEffects": false,
@@ -97,36 +97,36 @@
   },
   "size-limit": [
     {
-      "name": "prefkit (core)",
+      "name": "cookie-prefs (core)",
       "path": "dist/index.js",
       "limit": "2 KB",
       "gzip": true
     },
     {
-      "name": "prefkit/react",
+      "name": "cookie-prefs/react",
       "path": "dist/react/index.js",
       "limit": "980 B",
       "gzip": true,
       "ignore": [
-        "prefkit"
+        "cookie-prefs"
       ]
     },
     {
-      "name": "prefkit/next",
+      "name": "cookie-prefs/next",
       "path": "dist/next/index.js",
       "limit": "440 B",
       "gzip": true,
       "ignore": [
-        "prefkit"
+        "cookie-prefs"
       ]
     },
     {
-      "name": "prefkit/theme",
+      "name": "cookie-prefs/theme",
       "path": "dist/theme/index.js",
       "limit": "1910 B",
       "gzip": true,
       "ignore": [
-        "prefkit"
+        "cookie-prefs"
       ]
     }
   ],

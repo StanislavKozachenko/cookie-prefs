@@ -130,7 +130,7 @@ describe('BroadcastChannel fallback', () => {
 
     // A real other tab: cookie changes, then its post arrives.
     otherTabWrites('sidebar=true');
-    new Channel('prefkit').postMessage(0);
+    new Channel('cookie-prefs').postMessage(0);
     expect(listener.mock.calls).toEqual([[false], [true]]);
     off();
   });
@@ -141,7 +141,7 @@ describe('BroadcastChannel fallback', () => {
     const listener = vi.fn();
     const off = prefs.theme.subscribe(listener);
     prefs.theme.set('dark');
-    new Channel('prefkit').postMessage(0);
+    new Channel('cookie-prefs').postMessage(0);
     expect(listener).toHaveBeenCalledTimes(1);
     off();
   });
@@ -173,7 +173,7 @@ describe('BroadcastChannel fallback', () => {
     const listener = vi.fn();
     const off = prefs.theme.subscribe(listener);
     otherTabWrites('theme=dark');
-    const other = new BroadcastChannel('prefkit');
+    const other = new BroadcastChannel('cookie-prefs');
     other.postMessage(0);
     other.close();
     await vi.waitFor(() => expect(listener).toHaveBeenCalledWith('dark'));

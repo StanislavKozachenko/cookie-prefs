@@ -4,20 +4,20 @@ Instructions for coding agents working in this repository.
 
 ## Project
 
-prefkit is typed cookie-backed user preference state for React and Next.js (theme, sidebar, density, locale): readable in Server Components and on the client, no hydration flash, cross-tab sync. The theme preset will be API-compatible with next-themes.
+cookie-prefs is typed cookie-backed user preference state for React and Next.js (theme, sidebar, density, locale): readable in Server Components and on the client, no hydration flash, cross-tab sync. The theme preset will be API-compatible with next-themes.
 
 One package, four entries, each with its own source file:
 
-| Import          | Source                |
-| --------------- | --------------------- |
-| `prefkit`       | `src/index.ts`        |
-| `prefkit/react` | `src/react/index.tsx` |
-| `prefkit/next`  | `src/next/index.tsx`  |
-| `prefkit/theme` | `src/theme/index.tsx` |
+| Import               | Source                |
+| -------------------- | --------------------- |
+| `cookie-prefs`       | `src/index.ts`        |
+| `cookie-prefs/react` | `src/react/index.tsx` |
+| `cookie-prefs/next`  | `src/next/index.tsx`  |
+| `cookie-prefs/theme` | `src/theme/index.tsx` |
 
 The core internals (`builder`, `cookie`, `store`, `sync`, `reflect`, `types`, `standard-schema`) live in `src/core/`; `src/index.ts` is the entry that puts them together. Tests live in `__tests__` next to the code they cover: `src/core/__tests__/` (the core entry and its internals), `src/react/__tests__/`, `src/next/__tests__/` and `src/theme/__tests__/`. `*.test-d.ts` files are type tests, checked by `npm run typecheck` and never run; `src/core/__tests__/types.test-d.ts` pins the public types of every entry.
 
-Status: core, `prefkit/react`, `prefkit/next` and `prefkit/theme` are implemented. `docs/design.md` is the contract.
+Status: core, `cookie-prefs/react`, `cookie-prefs/next` and `cookie-prefs/theme` are implemented. `docs/design.md` is the contract.
 
 ## Commands
 
@@ -26,13 +26,13 @@ Status: core, `prefkit/react`, `prefkit/next` and `prefkit/theme` are implemente
 - `npm run typecheck`: `tsc --noEmit`
 - `npm run lint`: ESLint flat config
 - `npm run check:package`: publint and arethetypeswrong (needs a build first)
-- `npm run size`: size-limit, 2 KB gzip budget on the core entry plus budgets for `prefkit/react`, `prefkit/next` and `prefkit/theme` (needs a build first)
+- `npm run size`: size-limit, 2 KB gzip budget on the core entry plus budgets for `cookie-prefs/react`, `cookie-prefs/next` and `cookie-prefs/theme` (needs a build first)
 
 Run lint, typecheck, build, test, check:package and size before finishing a change.
 
 ## Rules
 
-- The core (`prefkit`) has zero runtime dependencies. `react` and `next` are optional peer dependencies and must never be imported from the core entry.
+- The core (`cookie-prefs`) has zero runtime dependencies. `react` and `next` are optional peer dependencies and must never be imported from the core entry.
 - Keep the core within its size budget; do not raise the limit to make it pass.
 - Do not disable lint rules or checks to get green; fix the cause.
 

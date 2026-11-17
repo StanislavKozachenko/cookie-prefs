@@ -1,4 +1,4 @@
-Create a GitHub pull request for the prefkit project following the project's established conventions.
+Create a GitHub pull request for the cookie-prefs project following the project's established conventions.
 
 ## PR format
 

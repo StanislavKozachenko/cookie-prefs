@@ -1,6 +1,6 @@
 # Security, platform notes and non-goals
 
-Constraints to know before shipping, and what prefkit deliberately does not do. Back to the [README](../README.md).
+Constraints to know before shipping, and what cookie-prefs deliberately does not do. Back to the [README](../README.md).
 
 ## Security and platform notes
 
@@ -9,7 +9,7 @@ Constraints to know before shipping, and what prefkit deliberately does not do. 
 - **CSP and nonce.** The pre-paint script is an inline script: pass `nonce` to `PrefsProvider` (or `ThemeProvider`) when your policy requires one. The client re-applies reflections with plain DOM calls and never runs a script, so it needs no nonce. `disableTransitionOnChange` adds a `<style>` that carries the same nonce.
 - **Trusted Types.** Under an enforced `require-trusted-types-for 'script'` policy, a `PrefsProvider` or `ThemeProvider` hydrated from server HTML works on React 18 and 19 (Next 14, 15 and 16 tested): React never writes the script's text, also when the provider re-renders or its props change, and the client applies prefs and themes with plain DOM calls. A provider that is first mounted on the client (not hydrated, for example in a nested layout first reached by a client-side navigation, in a component loaded with `ssr: false`, or remounted under a new `key`) sets the inert script's text through React, which the policy rejects.
 - **Safari 7-day cap.** Safari caps cookies written through `document.cookie` at 7 days. To keep a pref from reverting a week after its last write, `usePref` and `ThemeProvider` re-write an existing cookie once per page load, with the same value, so the window counts from the last visit. Only cookies whose `maxAge` is longer than 7 days are refreshed, so a short-lived pref expires as configured. A pref that no hook uses is refreshed only by `set()`. A cookie set by the server with `Set-Cookie` (for example in middleware, with `toCookie()`) keeps a long lifetime in Safari only for prefs that no hook in the page reads: the first load that renders a hook for that pref re-writes the cookie through `document.cookie`, which makes it a capped, script-written cookie again. This is based on WebKit's documentation and on CI, not on tests on real Safari or iOS devices.
-- **One React context.** Two copies of `prefkit/react` in one app mean two React contexts, so a provider from one copy does not reach hooks from the other. Keep a single installed version.
+- **One React context.** Two copies of `cookie-prefs/react` in one app mean two React contexts, so a provider from one copy does not reach hooks from the other. Keep a single installed version.
 - **Sandboxed iframes.** Without `allow-same-origin`, the browser blocks cookie access: `get()` returns the default and `set()` does nothing, without throwing.
 
 ## Non-goals

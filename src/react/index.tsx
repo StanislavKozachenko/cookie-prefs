@@ -99,7 +99,7 @@ export interface PrefsProviderProps {
 /**
  * Carries the server snapshot to `usePref()` and renders the pre-paint script.
  * Optional in client-only apps. In Next.js App Router use `PrefsProvider` from
- * `prefkit/next` instead, which fills both props for you.
+ * `cookie-prefs/next` instead, which fills both props for you.
  * @example
  * <PrefsProvider
  *   snapshot={snapshotPrefs(prefs, request.headers.get('cookie'))}

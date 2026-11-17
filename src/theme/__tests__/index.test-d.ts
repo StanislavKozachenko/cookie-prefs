@@ -1,4 +1,4 @@
-import type { CookieOptions } from 'prefkit';
+import type { CookieOptions } from 'cookie-prefs';
 import { expectTypeOf } from 'vitest';
 import type { ThemeProviderProps } from '../index';
 
