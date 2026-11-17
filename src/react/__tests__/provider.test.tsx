@@ -3,8 +3,8 @@ import { createRoot, hydrateRoot, type Root } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import * as z from 'zod';
-import { definePrefs, pref, prefsScript, snapshotPrefs, type PrefsRecord } from '../index';
-import { PrefsProvider, usePref, type PrefsProviderProps } from './index';
+import { definePrefs, pref, prefsScript, snapshotPrefs, type PrefsRecord } from '../../index';
+import { PrefsProvider, usePref, type PrefsProviderProps } from '../index';
 
 beforeAll(() => {
   (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;

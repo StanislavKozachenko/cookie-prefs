@@ -1,6 +1,6 @@
 import type { CookieOptions } from 'prefkit';
 import { expectTypeOf } from 'vitest';
-import type { ThemeProviderProps } from './index';
+import type { ThemeProviderProps } from '../index';
 
 // `cookie`: the core's cookie attributes, the one prop next-themes does not have.
 expectTypeOf<ThemeProviderProps['cookie']>().toEqualTypeOf<CookieOptions | undefined>();

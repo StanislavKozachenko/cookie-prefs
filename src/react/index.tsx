@@ -9,10 +9,10 @@ import {
   type ReactElement,
   type ReactNode,
 } from 'react';
-import type { Pref, PrefSetter, PrefsSnapshot } from '../types';
+import type { Pref, PrefSetter, PrefsSnapshot } from '../core/types';
 import { reapply } from './reapply';
 
-export type { PrefSetter } from '../types';
+export type { PrefSetter } from '../core/types';
 
 const Snapshot = createContext<PrefsSnapshot | undefined>(undefined);
 

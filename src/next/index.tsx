@@ -2,7 +2,7 @@ import { cookies, headers } from 'next/headers';
 import { prefsScript, readPrefs, snapshotPrefs } from 'prefkit';
 import { PrefsProvider as ClientPrefsProvider } from 'prefkit/react';
 import type { ReactElement, ReactNode } from 'react';
-import type { PrefsRecord, PrefsSnapshot, PrefValues } from '../types';
+import type { PrefsRecord, PrefsSnapshot, PrefValues } from '../core/types';
 
 /**
  * Raw values of these prefs for this request. The `Cookie` header is parsed like

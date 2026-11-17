@@ -1,4 +1,4 @@
-import type { Reflection } from '../reflect';
+import type { Reflection } from '../core/reflect';
 
 /**
  * Apply the reflections of a `prefsScript()` string on `<html>` again, from the

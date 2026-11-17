@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 // versions in node_modules). Handles from one copy must work with the other.
 const load = async () => {
   vi.resetModules();
-  return import('./index');
+  return import('../../index');
 };
 
 describe('two copies of the core', () => {

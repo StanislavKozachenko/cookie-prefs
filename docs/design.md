@@ -1,8 +1,8 @@
 # prefkit design
 
-Contract for the implementation. The public types in `src/index.ts`, `src/types.ts`,
-`src/react/index.tsx`, `src/next/index.tsx` and `src/theme/index.ts` are final;
-`src/types.test-d.ts` pins their inference and is checked by `npm run typecheck`.
+Contract for the implementation. The public types in `src/index.ts`, `src/core/types.ts`,
+`src/react/index.tsx`, `src/next/index.tsx` and `src/theme/index.tsx` are final;
+`src/core/__tests__/types.test-d.ts` pins their inference and is checked by `npm run typecheck`.
 Change the API only together with this document.
 
 > nuqs keeps state in the URL; prefkit keeps it in cookies, so the server knows it before the first render.
@@ -117,8 +117,8 @@ Other decisions:
 | BroadcastChannel: Baseline widely available since March 2022 | fallback channel | https://developer.mozilla.org/en-US/docs/Web/API/BroadcastChannel |
 | Cookie expiry: RFC 6265bis recommends a 400-day upper limit (Chrome enforces it) | default `maxAge` 400 days | https://httpwg.org/http-extensions/draft-ietf-httpbis-rfc6265bis.html |
 | `__Host-` cookies need `Secure`, `Path=/`, no `Domain` | documented on `prefix` | https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie |
-| Standard Schema v1: `'~standard'` with `version: 1`, `vendor`, `validate()` returning a result or a Promise, optional `types.{input,output}`; spec allows copying the interface | structural copy in `src/standard-schema.ts`; sync-only validation | https://standardschema.dev/ |
-| next-themes 0.4.6 (published 2025-03-11) is the latest; props and `useTheme` fields as typed in `src/theme/index.ts`; defaults: `storageKey 'theme'`, `attribute 'data-theme'`, `themes ['light','dark']`, `enableSystem true`, `enableColorScheme true` | theme preset mirrors them | https://github.com/pacocoursey/next-themes, npm registry |
+| Standard Schema v1: `'~standard'` with `version: 1`, `vendor`, `validate()` returning a result or a Promise, optional `types.{input,output}`; spec allows copying the interface | structural copy in `src/core/standard-schema.ts`; sync-only validation | https://standardschema.dev/ |
+| next-themes 0.4.6 (published 2025-03-11) is the latest; props and `useTheme` fields as typed in `src/theme/index.tsx`; defaults: `storageKey 'theme'`, `attribute 'data-theme'`, `themes ['light','dark']`, `enableSystem true`, `enableColorScheme true` | theme preset mirrors them | https://github.com/pacocoursey/next-themes, npm registry |
 | next-themes top open issues: #385 and #387 React 19 script warning (no maintainer response), #375 stale theme with Cache Components / Activity (effect re-applies on reveal), #370 `__name is not defined` in the injected script, #78 `theme-color`, #226 and #187 forcing a theme per page in App Router | preset fixes #385/#387 (`type` fix), #375 (external store, no reveal effects), #370 (static script); #78 and #226 are non-goals | https://github.com/pacocoursey/next-themes/issues |
 | nuqs: `parseAsX.withDefault()` removes `null`; setter takes value or updater; invalid value reads as default | same semantics, `.default()` naming | https://nuqs.dev/docs/basic-usage |
 | `@wrksz/themes`: next-themes-shaped API, cookie storage, `getTheme()` server helper, script via `useServerInsertedHTML` | confirms the conventions; prefkit's difference is general typed prefs | https://github.com/jakubwarkusz/themes |
@@ -126,7 +126,7 @@ Other decisions:
 ## Implementation notes
 
 - **Entry boundaries.** `prefkit/react` and `prefkit/theme` are client modules: their built files start with `'use client'`, prepended to the ESM and CJS output in tsup `onSuccess` (tree shaking strips a `banner` directive, and one config avoids `clean` races between parallel builds). `prefkit/next` is server-only: no `'use client'`, it imports `next/headers`. Server helpers must never live in a client entry, because a Server Component calling them gets a client reference.
-- **No duplicated state.** Runtime imports between entries use package specifiers (`'prefkit'`, `'prefkit/react'`) marked external in tsup, not relative paths, so the cross-tab listener and stores exist once and the client boundary survives bundling. Type-only imports from `../types` are fine.
+- **No duplicated state.** Runtime imports between entries use package specifiers (`'prefkit'`, `'prefkit/react'`) marked external in tsup, not relative paths, so the cross-tab listener and stores exist once and the client boundary survives bundling. Type-only imports from `../core/types` are fine.
 - **Duplicate copies.** Handles are portable across copies of the core (ESM + CJS, two versions): what `prefsScript` needs lives on the handle under a `Symbol.for` key, not in module state; two copies of `prefkit/react` still mean two React contexts, which is inherent to React.
 - **Next `PrefsProvider`** is an async Server Component: in `'server'` mode it passes the request snapshot that `getPrefs` reads too; in both modes it passes `prefsScript(prefs)` and `nonce` to the client `PrefsProvider` from `'prefkit/react'`. `prefs` itself never crosses to the client.
 - **Next request snapshot.** `snapshotPrefs(prefs, header)` over the raw `Cookie` header from `headers()`, so the server parses like the browser and the inline script. Per pref, a `cookies()` value that equals none of the header's values for that name, decoded as Next decodes them (URI-decoded, quotes kept, a bare name is `'true'`, malformed values skipped), was written earlier in this request and replaces it; `''` (left by `delete()`) removes it, so a same-request `set('')` of a string pref also reads as missing until the next request. A write equal to a later duplicate in the header is not detected.

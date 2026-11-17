@@ -3,8 +3,8 @@ import { act, Profiler, StrictMode, version, type ComponentType, type ReactNode 
 import { createRoot, hydrateRoot, type Root } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import * as entry from './index';
-import { ThemeProvider, useTheme, type ThemeProviderProps, type UseThemeProps } from './index';
+import * as entry from '../index';
+import { ThemeProvider, useTheme, type ThemeProviderProps, type UseThemeProps } from '../index';
 
 beforeAll(() => {
   (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;

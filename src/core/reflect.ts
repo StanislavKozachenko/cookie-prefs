@@ -53,7 +53,7 @@ export const apply = (targets: readonly string[], kind: Kind | undefined, s: str
  * The config comes as a string literal and is `JSON.parse`d: as an object literal, an
  * enum value named `__proto__` would set the prototype instead of adding a key.
  * `src/react/reapply.ts` ports it to DOM calls and finds the config after the only
- * `})("`: keep both in sync (parity test in `src/react/reapply.test.ts`).
+ * `})("`: keep both in sync (parity test in `src/react/__tests__/reapply.test.ts`).
  */
 const SOURCE =
   "(function(P){var d=document,h=d.documentElement,C='; '+d.cookie,i=0,j,p,m,v,n,t,k;" +
