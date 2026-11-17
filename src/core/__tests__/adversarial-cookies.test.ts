@@ -308,6 +308,44 @@ describe('cookies named like Object.prototype members', () => {
     expect(readPrefs(prefs, {})).toEqual({ a: undefined, b: 'd' });
     expect(readPrefs(prefs, Object.create({ constructor: 'inherited' }))).toEqual({ a: 'inherited', b: 'd' });
   });
+
+  it('a cookie named `__proto__` is kept in snapshots and read back from them', () => {
+    const prefs = definePrefs({ p: pref.string().options({ name: '__proto__' }).reflect('data-p') });
+    const cookie = '__proto__=x';
+    expect(readPrefs(prefs, cookie)).toEqual({ p: 'x' });
+    const snapshot = snapshotPrefs(prefs, cookie);
+    expect(Object.keys(snapshot)).toEqual(['__proto__']);
+    expect(Object.getPrototypeOf(snapshot)).toBe(Object.prototype);
+    expect(readPrefs(prefs, snapshot)).toEqual({ p: 'x' });
+    expect(JSON.parse(JSON.stringify(snapshot))).toEqual(snapshot);
+    fakeCookie(cookie);
+    expect(prefs.p.get()).toBe('x');
+    expect(scriptState(prefs).attrs).toEqual({ 'data-p': 'x' });
+    expect(storeState(prefs)).toEqual(scriptState(prefs));
+  });
+
+  it('a pref keyed `__proto__` is a handle like any other', () => {
+    const prefs = definePrefs({ ['__proto__']: pref.string().reflect('data-p'), other: pref.string() });
+    expect(Object.keys(prefs)).toEqual(['__proto__', 'other']);
+    expect(Object.getPrototypeOf(prefs)).toBe(Object.prototype);
+    expect(prefs['__proto__']!.name).toBe('__proto__');
+    expect(readPrefs(prefs, '__proto__=x; other=1')).toEqual({ ['__proto__']: 'x', other: '1' });
+    expect(Object.keys(readPrefs(prefs, ''))).toEqual(['__proto__', 'other']);
+    expect(prefsScript(prefs)).toContain('data-p');
+  });
+
+  it('keys inherited from a polluted Object.prototype are not prefs', () => {
+    const proto = Object.prototype as Record<string, unknown>;
+    proto.polluted = pref.string();
+    try {
+      const prefs = definePrefs({ theme: pref.enum(['light', 'dark']).default('light') });
+      expect(Object.keys(prefs)).toEqual(['theme']);
+      expect(readPrefs(prefs, 'polluted=1')).toEqual({ theme: 'light' });
+      expect(Object.keys(snapshotPrefs(prefs, 'theme=dark; polluted=1'))).toEqual(['theme']);
+    } finally {
+      delete proto.polluted;
+    }
+  });
 });
 
 describe('round trips through the browser cookie', () => {

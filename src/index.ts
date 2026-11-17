@@ -145,9 +145,9 @@ export const pref: PrefFactory = {
  */
 export function definePrefs<S extends PrefShape>(shape: S, options?: PrefsOptions): Prefs<S>;
 export function definePrefs(shape: PrefShape, { prefix, ...options }: PrefsOptions = {}) {
-  const prefs: Record<string, unknown> = {};
-  for (const key in shape) prefs[key] = bind(key, shape[key] as unknown as Def, prefix ?? '', options);
-  return prefs as never;
+  return Object.fromEntries(
+    Object.entries(shape).map(([key, def]) => [key, bind(key, def as unknown as Def, prefix ?? '', options)]),
+  ) as never;
 }
 
 /**
@@ -157,9 +157,7 @@ export function definePrefs(shape: PrefShape, { prefix, ...options }: PrefsOptio
  */
 export function readPrefs<P extends PrefsRecord>(prefs: P, source: CookieSource): PrefValues<P>;
 export function readPrefs(prefs: PrefsRecord, source: CookieSource) {
-  const values: Record<string, unknown> = {};
-  for (const key in prefs) values[key] = prefs[key]!.read(source);
-  return values as never;
+  return Object.fromEntries(Object.entries(prefs).map(([key, handle]) => [key, handle.read(source)])) as never;
 }
 
 /**
@@ -171,16 +169,17 @@ export function readPrefs(prefs: PrefsRecord, source: CookieSource) {
  */
 export function snapshotPrefs(prefs: PrefsRecord, source: CookieSource): PrefsSnapshot;
 export function snapshotPrefs(prefs: PrefsRecord, source: CookieSource): PrefsSnapshot {
-  const snapshot: Record<string, string> = {};
-  for (const { name } of Object.values(prefs)) {
-    try {
-      const raw = rawOf(source, name);
-      if (typeof raw == 'string') snapshot[name] = raw;
-    } catch {
-      // malformed value: leave it out, the client reads the default
-    }
-  }
-  return snapshot;
+  return Object.fromEntries(
+    Object.values(prefs).flatMap(({ name }) => {
+      try {
+        const raw = rawOf(source, name);
+        if (typeof raw == 'string') return [[name, raw]];
+      } catch {
+        // malformed value: leave it out, the client reads the default
+      }
+      return [];
+    }),
+  );
 }
 
 /**
