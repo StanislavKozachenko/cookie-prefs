@@ -225,6 +225,33 @@ describe('useTheme', () => {
     set('dark');
     expect(write).toHaveBeenLastCalledWith('theme=dark; Path=/; Max-Age=34560000; SameSite=lax');
   });
+
+  it('writes the cookie with the cookie prop attributes', () => {
+    const write = vi.spyOn(Document.prototype, 'cookie', 'set');
+    render(
+      app({
+        cookie: { domain: 'example.com', path: '/app', maxAge: 60, sameSite: 'none', secure: true, partitioned: true },
+      }),
+    );
+    set('dark');
+    expect(write).toHaveBeenLastCalledWith(
+      'theme=dark; Path=/app; Domain=example.com; Max-Age=60; SameSite=none; Secure; Partitioned',
+    );
+  });
+
+  it('keeps its store and effects across renders with a new but equal cookie literal', () => {
+    render(app({ cookie: { sameSite: 'strict' } }));
+    const first = current.setTheme;
+    const paint = vi.spyOn(html, 'setAttribute');
+    rerender(app({ cookie: { sameSite: 'strict' } }));
+    expect(current.setTheme).toBe(first);
+    expect(paint).not.toHaveBeenCalled();
+    rerender(app({ cookie: { sameSite: 'none', secure: true } }));
+    expect(current.setTheme).not.toBe(first);
+    const write = vi.spyOn(Document.prototype, 'cookie', 'set');
+    set('dark');
+    expect(write).toHaveBeenLastCalledWith('theme=dark; Path=/; Max-Age=34560000; SameSite=none; Secure');
+  });
 });
 
 describe('system theme', () => {

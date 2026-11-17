@@ -1,4 +1,4 @@
-import { definePrefs, pref } from 'prefkit';
+import { definePrefs, pref, type CookieOptions } from 'prefkit';
 import {
   createContext,
   useContext,
@@ -26,7 +26,7 @@ export interface ScriptProps
   [dataAttribute: `data-${string}`]: unknown;
 }
 
-/** Same props and defaults as next-themes `ThemeProvider`. */
+/** Same props and defaults as next-themes `ThemeProvider`, plus `cookie`. */
 export interface ThemeProviderProps {
   children?: ReactNode;
   /** All theme names. `'system'` is added when `enableSystem` is on. @default ['light', 'dark'] */
@@ -55,6 +55,16 @@ export interface ThemeProviderProps {
   nonce?: string | undefined;
   /** Extra props for the inline script element. */
   scriptProps?: ScriptProps | undefined;
+  /**
+   * Attributes of the theme cookie, as for any pref (not in next-themes). Defaults:
+   * `Path=/`, `SameSite=Lax`, 400 days, current host only, `Secure` on `https:`.
+   * @example
+   * // one theme for app.example.com and www.example.com
+   * <ThemeProvider cookie={{ domain: 'example.com' }}>
+   * // inside a cross-site iframe
+   * <ThemeProvider cookie={{ sameSite: 'none', secure: true, partitioned: true }}>
+   */
+  cookie?: CookieOptions | undefined;
 }
 
 /**
@@ -133,6 +143,7 @@ function Theme({
   value,
   nonce,
   scriptProps,
+  cookie,
 }: ThemeProviderProps): ReactElement {
   const listed = enableSystem ? [...themes, 'system'] : themes;
   // Every valid stored name to its DOM string. `value` keys are themes too, as in the
@@ -154,14 +165,15 @@ function Theme({
   // client copy is inert, and new text on a hydrated script is an `innerHTML` write
   // that enforced Trusted Types reject. The live config below drives the client.
   const [first] = useState(script);
-  // Inline `themes` and `value` literals are new objects on every render, so the store,
-  // the config and the setter are keyed on the script, which encodes all of them.
+  // Inline `themes`, `value` and `cookie` literals are new objects on every render, so
+  // the store, the config and the setter are keyed on the script, which encodes all of
+  // them but `cookie`, and on `cookie` as JSON.
   const [handle, config, themeList, setTheme] = useMemo(() => {
     const handle = definePrefs({
       theme: pref
         .enum(Object.keys(dom) as [string])
         .default(defaultTheme)
-        .options({ name: storageKey }),
+        .options({ ...cookie, name: storageKey }),
     }).theme;
     const setTheme: UseThemeProps['setTheme'] = (next) => {
       const name = typeof next == 'function' ? next(handle.get()) : next;
@@ -169,7 +181,7 @@ function Theme({
       if (has(dom, name)) handle.set(name);
     };
     return [handle, fresh, listed, setTheme] as const;
-  }, [script]);
+  }, [script, JSON.stringify(cookie)]);
 
   // External stores, so a provider kept hidden by <Activity> never holds a stale theme
   // (next-themes #375). `undefined` during SSR and hydration, as in next-themes.
