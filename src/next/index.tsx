@@ -85,14 +85,17 @@ export interface NextPrefsProviderProps<P extends PrefsRecord> {
  */
 export async function PrefsProvider<P extends PrefsRecord>({
   prefs,
-  mode = 'script',
+  mode,
   nonce,
   children,
 }: NextPrefsProviderProps<P>): Promise<ReactElement> {
-  // Script mode must not touch request APIs, or the whole route becomes dynamic.
-  const snapshot = mode == 'server' ? await requestSnapshot(prefs) : undefined;
   return (
-    <ClientPrefsProvider snapshot={snapshot} script={prefsScript(prefs)} nonce={nonce}>
+    <ClientPrefsProvider
+      // Script mode (the default) must not touch request APIs, or the whole route becomes dynamic.
+      snapshot={mode == 'server' ? await requestSnapshot(prefs) : undefined}
+      script={prefsScript(prefs)}
+      nonce={nonce}
+    >
       {children}
     </ClientPrefsProvider>
   );
