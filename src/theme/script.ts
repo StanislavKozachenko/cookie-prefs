@@ -58,8 +58,6 @@ export const media = () => globalThis.matchMedia?.(MEDIA);
 /** OS colour scheme; `'light'` where `matchMedia` is missing. */
 export const system = (): 'light' | 'dark' => (media()?.matches ? 'dark' : 'light');
 
-export const LIGHT_DARK = /^(light|dark)$/;
-
 /**
  * Apply a stored theme (already validated, default applied) to `<html>` like the
  * inline script does, with plain DOM calls: nothing is executed, so CSP and Trusted
@@ -80,7 +78,7 @@ export const paint = ([, , attributes, dom, , forced, enableSystem, colorScheme]
     } catch {
       // invalid class or attribute name: leave this target as is, like the script
     }
-  if (colorScheme != null) h.style.colorScheme = LIGHT_DARK.test(t) ? t : colorScheme;
+  if (colorScheme != null) h.style.colorScheme = /^(light|dark)$/.test(t) ? t : colorScheme;
 };
 
 /**

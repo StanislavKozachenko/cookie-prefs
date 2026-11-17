@@ -15,7 +15,7 @@ import {
   type ScriptHTMLAttributes,
   type SetStateAction,
 } from 'react';
-import { LIGHT_DARK, media, paint, pauseTransitions, system, themeScript, type Config } from './script';
+import { media, paint, pauseTransitions, system, themeScript, type Config } from './script';
 
 /** `class` or any `data-*` attribute on `<html>`. */
 export type Attribute = `data-${string}` | 'class';
@@ -167,7 +167,7 @@ function Theme({
     forcedTheme || null,
     enableSystem ? 1 : 0,
     // `color-scheme` for other themes: the default when it is light or dark, as in next-themes
-    enableColorScheme ? (LIGHT_DARK.test(defaultTheme) ? defaultTheme : '') : null,
+    enableColorScheme ? (/^(light|dark)$/.test(defaultTheme) ? defaultTheme : '') : null,
   ];
   const script = themeScript(fresh);
   // Only the first script is rendered: it ran (or not) when the page was parsed, the
