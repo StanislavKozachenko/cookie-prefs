@@ -60,8 +60,9 @@ const make = () =>
   });
 
 /**
- * Raw cookie values a browser can hold: no `;`, no control characters, no whitespace
- * at either end (browsers strip spaces and tabs; non-ASCII whitespace is left out here).
+ * Raw cookie values a browser can hold: no `;`, no control characters, no spaces or
+ * tabs at either end (browsers strip those). Other whitespace stays: a server or a
+ * sibling subdomain can set a value that starts or ends with U+00A0, U+2028 or U+FEFF.
  */
 const hostileValues = [
   'light',
@@ -135,6 +136,14 @@ const hostileValues = [
   '</script>',
   'a\u2028b',
   '%E2%80%A8',
+  '\u00a0dark',
+  'dark\u00a0',
+  'dark\u2028',
+  '\u2029true',
+  '\ufeffdark',
+  '\u3000x',
+  '25\u00a0',
+  '\u00a05',
   '😀',
   '%F0%9F%98%80',
   'x'.repeat(4000),
@@ -155,6 +164,9 @@ const hostileNames = [
   'themes',
   'app.theme',
   'the%6De',
+  '\u00a0theme',
+  'theme\ufeff',
+  '\u2028sidebar',
   '__proto__',
   'constructor',
   'toString',
@@ -221,6 +233,24 @@ describe('every read path agrees on hostile cookie strings', () => {
       expect(readPrefs(prefs, snapshot), label).toEqual(values);
       expect(JSON.parse(JSON.stringify(snapshot)), label).toEqual(snapshot);
     }
+  });
+
+  it.each([
+    ['value with a no-break space', 'theme=\u00a0dark'],
+    ['value with a line separator', 'theme=dark\u2028'],
+    ['value with a BOM', 'theme=\ufeffdark'],
+    ['name with a no-break space', '\u00a0theme=dark'],
+  ])('only spaces and tabs are trimmed, on every path: %s', (_, cookie) => {
+    const prefs = definePrefs({ theme: pref.enum(['light', 'dark']).default('light').reflect('data-theme') });
+    fakeCookie(cookie);
+    expect(scriptState(prefs).attrs).toEqual({ 'data-theme': 'light' });
+    expect(reapplyState(prefs)).toEqual(scriptState(prefs));
+    expect(storeState(prefs)).toEqual(scriptState(prefs));
+    expect(prefs.theme.get()).toBe('light');
+    expect(readPrefs(prefs, cookie)).toEqual({ theme: 'light' });
+    expect(readPrefs(prefs, snapshotPrefs(prefs, cookie))).toEqual({ theme: 'light' });
+    // spaces and tabs, which browsers never leave in `document.cookie`, are trimmed on the server
+    expect(readPrefs(prefs, ' \t theme \t= \t dark \t;')).toEqual({ theme: 'dark' });
   });
 
   it('a nameless cookie that looks like `name=value` is that cookie on every path', () => {
@@ -307,6 +337,44 @@ describe('cookies named like Object.prototype members', () => {
     });
     expect(readPrefs(prefs, {})).toEqual({ a: undefined, b: 'd' });
     expect(readPrefs(prefs, Object.create({ constructor: 'inherited' }))).toEqual({ a: 'inherited', b: 'd' });
+  });
+
+  it('a cookie named `__proto__` is kept in snapshots and read back from them', () => {
+    const prefs = definePrefs({ p: pref.string().options({ name: '__proto__' }).reflect('data-p') });
+    const cookie = '__proto__=x';
+    expect(readPrefs(prefs, cookie)).toEqual({ p: 'x' });
+    const snapshot = snapshotPrefs(prefs, cookie);
+    expect(Object.keys(snapshot)).toEqual(['__proto__']);
+    expect(Object.getPrototypeOf(snapshot)).toBe(Object.prototype);
+    expect(readPrefs(prefs, snapshot)).toEqual({ p: 'x' });
+    expect(JSON.parse(JSON.stringify(snapshot))).toEqual(snapshot);
+    fakeCookie(cookie);
+    expect(prefs.p.get()).toBe('x');
+    expect(scriptState(prefs).attrs).toEqual({ 'data-p': 'x' });
+    expect(storeState(prefs)).toEqual(scriptState(prefs));
+  });
+
+  it('a pref keyed `__proto__` is a handle like any other', () => {
+    const prefs = definePrefs({ ['__proto__']: pref.string().reflect('data-p'), other: pref.string() });
+    expect(Object.keys(prefs)).toEqual(['__proto__', 'other']);
+    expect(Object.getPrototypeOf(prefs)).toBe(Object.prototype);
+    expect(prefs['__proto__']!.name).toBe('__proto__');
+    expect(readPrefs(prefs, '__proto__=x; other=1')).toEqual({ ['__proto__']: 'x', other: '1' });
+    expect(Object.keys(readPrefs(prefs, ''))).toEqual(['__proto__', 'other']);
+    expect(prefsScript(prefs)).toContain('data-p');
+  });
+
+  it('keys inherited from a polluted Object.prototype are not prefs', () => {
+    const proto = Object.prototype as Record<string, unknown>;
+    proto.polluted = pref.string();
+    try {
+      const prefs = definePrefs({ theme: pref.enum(['light', 'dark']).default('light') });
+      expect(Object.keys(prefs)).toEqual(['theme']);
+      expect(readPrefs(prefs, 'polluted=1')).toEqual({ theme: 'light' });
+      expect(Object.keys(snapshotPrefs(prefs, 'theme=dark; polluted=1'))).toEqual(['theme']);
+    } finally {
+      delete proto.polluted;
+    }
   });
 });
 

@@ -180,6 +180,23 @@ describe('BroadcastChannel fallback', () => {
     off();
   });
 
+  it('falls back to no channel where BroadcastChannel cannot be constructed', () => {
+    // Chromium in an opaque origin (a sandboxed iframe without allow-same-origin), where
+    // CookieStore is missing too
+    const Channel = vi.fn(function () {
+      throw new DOMException("Can't create BroadcastChannel in an opaque origin", 'SecurityError');
+    });
+    vi.stubGlobal('BroadcastChannel', Channel);
+    const prefs = make();
+    const listener = vi.fn();
+    let off = () => {};
+    expect(() => (off = prefs.theme.subscribe(listener))).not.toThrow();
+    expect(() => prefs.theme.set('dark')).not.toThrow();
+    expect(listener).toHaveBeenCalledWith('dark');
+    expect(Channel).toHaveBeenCalled();
+    expect(off).not.toThrow();
+  });
+
   it('still works locally with neither CookieStore nor BroadcastChannel', () => {
     vi.stubGlobal('BroadcastChannel', undefined);
     const prefs = make();
@@ -188,5 +205,44 @@ describe('BroadcastChannel fallback', () => {
     prefs.theme.set('dark');
     expect(listener).toHaveBeenCalledWith('dark');
     off();
+  });
+});
+
+describe('tab shown again', () => {
+  const show = (state: DocumentVisibilityState) => {
+    vi.spyOn(document, 'visibilityState', 'get').mockReturnValue(state);
+    document.dispatchEvent(new Event('visibilitychange'));
+  };
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('re-checks subscribed prefs for changes nothing announced', () => {
+    fakeChannels(); // no CookieStore: a server `Set-Cookie` fires nothing
+    const prefs = make();
+    const listener = vi.fn();
+    const off = prefs.sidebar.subscribe(listener);
+    otherTabWrites('sidebar=false'); // or a tab on a sibling subdomain, which posts elsewhere
+    show('hidden');
+    expect(listener).not.toHaveBeenCalled();
+    show('visible');
+    expect(listener.mock.calls).toEqual([[false]]);
+    expect(document.documentElement.getAttribute('data-sidebar')).toBe('false');
+    off();
+  });
+
+  it('stops listening after the last unsubscribe', () => {
+    const add = vi.spyOn(document, 'addEventListener');
+    const remove = vi.spyOn(document, 'removeEventListener');
+    const prefs = make();
+    const listener = vi.fn();
+    prefs.theme.subscribe(listener)();
+    const added = add.mock.calls.filter((c) => c[0] == 'visibilitychange');
+    expect(added).toHaveLength(1);
+    expect(remove.mock.calls.filter((c) => c[0] == 'visibilitychange')).toEqual(added);
+    otherTabWrites('theme=dark');
+    show('visible');
+    expect(listener).not.toHaveBeenCalled();
   });
 });

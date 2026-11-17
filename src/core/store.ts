@@ -22,17 +22,22 @@ export const bind = (key: string, def: Def, prefix: string, options: CookieOptio
   const kind = def.values
     ? Object.fromEntries(def.values.map((v) => [v, merge<Record<string, string>>({ [v]: v }, def.m)[v]!]))
     : def.k;
-  // Dev only (dropped from production builds): `classList` rejects an empty token or one
-  // with whitespace, so such a class would never be applied, by the client or the script.
-  if (
-    typeof process == 'object' &&
-    process.env.NODE_ENV != 'production' &&
-    targets?.includes('class') &&
-    Object.values({ ...(kind as object) }).some((c) => !/^[^\t\n\f\r ]+$/.test(c as string))
-  )
-    throw TypeError(`cookie-prefs: ${key}.reflect('class') needs non-empty classes without whitespace`);
-  // Parsed value per raw string, so reads are referentially stable. Bounded, since
-  // on the server raw strings come from arbitrary requests.
+  // Dev only (dropped from production builds). A cookie with an empty name is written
+  // as a bare value, which no read path takes for a cookie of any name. `classList`
+  // rejects an empty token or one with whitespace, so such a class would never be
+  // applied, by the client or the script.
+  if (typeof process == 'object' && process.env.NODE_ENV != 'production') {
+    if (!name) throw TypeError(`cookie-prefs: ${key} needs a non-empty cookie name`);
+    if (
+      targets?.includes('class') &&
+      Object.values({ ...(kind as object) }).some((c) => !/^[^\t\n\f\r ]+$/.test(c as string))
+    )
+      throw TypeError(`cookie-prefs: ${key}.reflect('class') needs non-empty classes without whitespace`);
+  }
+  // Parsed value per raw string, so reads in the browser are referentially stable
+  // (`useSyncExternalStore`, hydration from a snapshot). Bounded. Without a DOM every
+  // read parses again: a json or custom value is an object that one request could
+  // mutate, and a cached one would be handed to the next request.
   const cache = new Map<string, unknown>();
   const listeners = new Set<(value: unknown) => void>();
   let last: unknown;
@@ -41,7 +46,7 @@ export const bind = (key: string, def: Def, prefix: string, options: CookieOptio
     try {
       const raw = rawOf(source, name);
       if (typeof raw == 'string' && raw.length <= 4096) {
-        if (!cache.has(raw)) {
+        if (!cache.has(raw) || typeof document == 'undefined') {
           if (cache.size > 9) cache.clear();
           cache.set(raw, def.p(raw));
         }
@@ -73,12 +78,25 @@ export const bind = (key: string, def: Def, prefix: string, options: CookieOptio
 
   // Update `<html>` every time: while nothing subscribes `last` goes stale as the
   // provider, other tabs or the server move the DOM. Notify only when the value differs.
+  // A listener's error is thrown again from a timer: it reaches the global error
+  // handler without skipping the other listeners or failing `set()` and the hub.
   const check = () => {
     const value = get();
     if (targets) apply(targets, kind, domOf(kind, value));
     if (!Object.is(value, last)) {
       last = value;
-      listeners.forEach((listener) => listener(value));
+      listeners.forEach((listener) => {
+        // Once a listener has written the pref, the nested check delivered the newer
+        // value to everyone: skip this outdated one.
+        if (Object.is(value, last))
+          try {
+            listener(value);
+          } catch (e) {
+            setTimeout(() => {
+              throw e;
+            });
+          }
+      });
     }
   };
 

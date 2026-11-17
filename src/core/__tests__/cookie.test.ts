@@ -12,6 +12,26 @@ describe('rawOf: Cookie header', () => {
   it('tolerates spaces around names, values and separators', () => {
     expect(rawOf('a=1;theme=dark', 'theme')).toBe('dark');
     expect(rawOf('  a = 1 ;  theme =  dark  ', 'theme')).toBe('dark');
+    expect(rawOf('a=1;\ttheme\t=\t"a b"\t ', 'theme')).toBe('a b');
+  });
+
+  it('keeps other whitespace around names and values, like browsers', () => {
+    expect(rawOf('theme=\u00a0dark', 'theme')).toBe('\u00a0dark');
+    expect(rawOf('theme= \u2028dark\ufeff ', 'theme')).toBe('\u2028dark\ufeff');
+    expect(rawOf('\u00a0theme=dark', 'theme')).toBeUndefined();
+    expect(rawOf('\u00a0theme=dark', '\u00a0theme')).toBe('dark');
+    expect(rawOf('th eme=dark', 'theme')).toBeUndefined();
+  });
+
+  it('takes linear time on long runs of spaces and tabs', () => {
+    // a backtracking trim would take minutes on these
+    const run = ' \t'.repeat(100_000);
+    const start = performance.now();
+    expect(rawOf(`theme=a${run}b${run}`, 'theme')).toBe(`a${run}b`);
+    expect(rawOf(`${run}x${run}`, 'theme')).toBeUndefined();
+    expect(rawOf(`${run}theme${run}=${run}`, 'theme')).toBe('');
+    expect(rawOf(`x ${'a '.repeat(100_000)}`, 'theme')).toBeUndefined();
+    expect(performance.now() - start).toBeLessThan(2000);
   });
 
   it('strips double quotes around the value', () => {

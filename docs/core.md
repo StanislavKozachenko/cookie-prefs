@@ -35,6 +35,12 @@ response.cookies.set(prefs.density.toCookie('compact'))
 
 Clearing is `reset()`, never `set(undefined)`. `set()` and `reset()` do nothing on the server and `get()` returns the default there: use `read()` or `getPrefs()` instead.
 
+Treat the values you read as read-only. In the browser `get()` and `read()` return the same object for the same cookie to every caller (that keeps `usePref` from re-rendering), so mutating a `json` or `custom` value changes it for everyone until the cookie changes; copy it and `set()` the copy instead. On the server every `read()` parses again, so one request never sees another's value. A `.default()` value is returned as is, on the server too: never mutate it.
+
+`subscribe()` listeners run synchronously, in subscription order, and only when the value changed. A listener that throws does not stop the others and never makes `set()` throw; its error is thrown again from a timer, so it still reaches `window.onerror` and error monitoring. Subscribing the same function twice registers it once.
+
+Other tabs' writes reach subscribers at once (CookieStore `change` events, or a `BroadcastChannel` message where CookieStore is missing). A change nothing announces, such as a server `Set-Cookie` without CookieStore or a write from a tab on a sibling subdomain, is picked up when the tab becomes visible again.
+
 `toCookie()` returns the cookie as `{ name, value, path, maxAge, sameSite, ... }`, which Next.js `cookies().set()` accepts. Its `value` is not URI-encoded: frameworks encode on set, but if you write a raw `Set-Cookie` header yourself, pass the value through `encodeURIComponent`. `maxAge` is in seconds, like the `Max-Age` attribute; Express `res.cookie` takes milliseconds, so multiply it there:
 
 ```ts
