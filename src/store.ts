@@ -47,12 +47,16 @@ export const bind = (key: string, def: Def, prefix: string, options: CookieOptio
 
   let warned = false;
   const get = () => {
-    if (hasDom()) return read(document.cookie);
+    try {
+      return read(document.cookie);
+    } catch {
+      // no DOM, or a sandboxed iframe where reading `document.cookie` throws
+    }
     // Dev only. `process` is checked first so runtimes without it never throw.
     if (typeof process == 'object' && process.env.NODE_ENV != 'production' && !warned) {
       warned = true;
       console.warn(
-        `prefkit: ${key}.get() has no DOM here and returns the default. On the server use read() or getPrefs().`,
+        `prefkit: ${key}.get() cannot read document.cookie here and returns the default. On the server use read() or getPrefs().`,
       );
     }
     return fallback;
@@ -70,8 +74,12 @@ export const bind = (key: string, def: Def, prefix: string, options: CookieOptio
   };
 
   const write = (value?: string) => {
-    document.cookie = serialize(attrs, value);
-    post();
+    try {
+      document.cookie = serialize(attrs, value);
+      post();
+    } catch {
+      // sandboxed iframe: `document.cookie` throws; nothing is written
+    }
     check();
   };
 
