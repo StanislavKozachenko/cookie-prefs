@@ -169,7 +169,7 @@ describe('prefsScript', () => {
     expect(state().attrs).toEqual({ 'data-before': 'x', 'data-c': 'y', 'data-b': 'false' });
   });
 
-  it('strips quotes and takes the first duplicate, like the server', () => {
+  it('strips quotes around the value, like rawOf', () => {
     document.cookie = 'app.locale="fr"';
     run(make());
     expect(html.getAttribute('data-locale')).toBe('fr');
