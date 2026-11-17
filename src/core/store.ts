@@ -73,12 +73,22 @@ export const bind = (key: string, def: Def, prefix: string, options: CookieOptio
 
   // Update `<html>` every time: while nothing subscribes `last` goes stale as the
   // provider, other tabs or the server move the DOM. Notify only when the value differs.
+  // A listener's error is thrown again from a timer: it reaches the global error
+  // handler without skipping the other listeners or failing `set()` and the hub.
   const check = () => {
     const value = get();
     if (targets) apply(targets, kind, domOf(kind, value));
     if (!Object.is(value, last)) {
       last = value;
-      listeners.forEach((listener) => listener(value));
+      listeners.forEach((listener) => {
+        try {
+          listener(value);
+        } catch (e) {
+          setTimeout(() => {
+            throw e;
+          });
+        }
+      });
     }
   };
 

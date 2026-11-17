@@ -196,7 +196,13 @@ export interface Pref<T, V = T> {
   set(value: T | ((prev: V) => T)): void;
   /** Delete the cookie, so the value goes back to the default. No-op on the server. */
   reset(): void;
-  /** Listen for changes from this tab and other tabs. Returns an unsubscribe function. */
+  /**
+   * Listen for changes from this tab and other tabs. Returns an unsubscribe function.
+   * Listeners run synchronously, in subscription order. A listener that throws does not
+   * stop the others and never makes `set()` or `reset()` throw: its error is thrown
+   * again from a `setTimeout` callback, so it reaches the global error handler
+   * (`window.onerror`, error monitoring) instead of being swallowed.
+   */
   subscribe(listener: (value: V) => void): () => void;
   /**
    * Read the value from request cookies (stores and maps hold URI-decoded values).
