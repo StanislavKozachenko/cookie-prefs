@@ -19,11 +19,20 @@ const Snapshot = createContext<PrefsSnapshot | undefined>(undefined);
 // React 18 warns about `useLayoutEffect` during SSR; the effect only matters in the browser.
 const useLayout = typeof document == 'undefined' ? useEffect : useLayoutEffect;
 
+/** Handles already checked for a refresh in this page load. */
+const seen = new WeakSet<object>();
+
 /**
  * Read and write one pref, like `useState`. Built on `useSyncExternalStore`, so every
  * component using the same pref stays in sync, also across tabs. During SSR and
  * hydration the value comes from the nearest `<PrefsProvider snapshot>`, or the
  * default when there is none.
+ *
+ * Safari caps cookies written by scripts at 7 days, whatever `maxAge` says. So once
+ * per page load the hook re-writes the pref's cookie when it already exists, with the
+ * same value: the 7 days then count from the last visit, not the last change. A pref
+ * no hook uses is refreshed only by `set()`. A cookie set by the server (`Set-Cookie`,
+ * e.g. middleware writing `pref.toCookie(value)`) is not capped.
  * @example
  * const [sidebar, setSidebar] = usePref(prefs.sidebar)
  * <button onClick={() => setSidebar((open) => !open)}>Toggle</button>
@@ -35,6 +44,23 @@ export function usePref<T, V>(pref: Pref<T, V>): [value: V, setValue: PrefSetter
   const value = useSyncExternalStore(pref.subscribe, pref.get, () =>
     snapshot ? pref.read(snapshot) : pref.defaultValue,
   );
+  useEffect(() => {
+    if (seen.has(pref)) return;
+    seen.add(pref);
+    try {
+      const current = pref.get() as unknown as T;
+      // Only an existing cookie, and only when writing it back yields the very same
+      // value (same object for json and custom prefs), so the store notifies nobody.
+      if (
+        current !== undefined &&
+        ('; ' + document.cookie).indexOf('; ' + pref.name + '=') >= 0 &&
+        pref.read({ [pref.name]: pref.toCookie(current).value }) === (current as unknown)
+      )
+        pref.set(() => current);
+    } catch {
+      // a codec that throws, or cookies that cannot be written: nothing to refresh
+    }
+  }, [pref]);
   return [value, pref.set];
 }
 
