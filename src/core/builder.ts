@@ -1,3 +1,4 @@
+import { merge } from './cookie';
 import type { PrefOptions } from './types';
 
 /**
@@ -33,7 +34,7 @@ export const builder = (def: Def): never =>
   ({
     ...def,
     default: (d: unknown) => builder({ ...def, d }),
-    options: (o: PrefOptions) => builder({ ...def, o: { ...def.o, ...o } }),
+    options: (o: PrefOptions) => builder({ ...def, o: merge(def.o, o) }),
     reflect: (r: string | readonly string[], m?: Record<string, string>) =>
       builder({ ...def, r: ([] as string[]).concat(r), m }),
   }) as never;

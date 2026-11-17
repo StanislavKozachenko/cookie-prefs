@@ -26,6 +26,14 @@ export const rawOf = (source: CookieSource, name: string): string | undefined =>
     : (source as Record<string, string | undefined> | null | undefined)?.[name];
 };
 
+/**
+ * Own enumerable properties of `sources`, later ones winning, like a spread, except that
+ * an `undefined` (or `null`) value means "not set" and keeps the value from the sources
+ * before.
+ */
+export const merge = <T extends object>(...sources: (T | undefined)[]): T =>
+  Object.fromEntries(sources.flatMap((s) => Object.entries({ ...s }).filter((e) => e[1] != null))) as T;
+
 /** Default cookie attributes. */
 export const defaults = { path: '/', maxAge: 34560000, sameSite: 'lax' } as const;
 

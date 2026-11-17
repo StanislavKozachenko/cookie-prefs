@@ -1,8 +1,8 @@
 import type { Def } from './builder';
-import { defaults, rawOf, serialize } from './cookie';
+import { defaults, merge, rawOf, serialize } from './cookie';
 import { apply, domOf, type Reflection } from './reflect';
 import { hub, post } from './sync';
-import type { CookieOptions, CookieSource } from './types';
+import type { CookieInit, CookieOptions, CookieSource, PrefOptions } from './types';
 
 /**
  * Key of a handle's reflection config, for `prefsScript()`. Kept on the handle under a
@@ -16,7 +16,7 @@ const hasDom = () => typeof document != 'undefined';
 /** Turn a builder into a `Pref` handle (typed by the caller). */
 export const bind = (key: string, def: Def, prefix: string, options: CookieOptions) => {
   const name = encodeURIComponent(def.o?.name ?? prefix + key);
-  const attrs = { ...defaults, ...options, ...def.o, name };
+  const attrs = merge<PrefOptions>(defaults, options, def.o, { name }) as Omit<CookieInit, 'value'>;
   const fallback = def.d;
   const targets = def.r;
   const kind = def.values
