@@ -11,7 +11,6 @@ import type { CookieOptions, CookieSource } from './types';
  */
 export const REFLECTION = Symbol.for('prefkit.reflection.1');
 
-const NONE = {};
 const hasDom = () => typeof document != 'undefined';
 
 /** Turn a builder into a `Pref` handle (typed by the caller). */
@@ -27,7 +26,7 @@ export const bind = (key: string, def: Def, prefix: string, options: CookieOptio
   // on the server raw strings come from arbitrary requests.
   const cache = new Map<string, unknown>();
   const listeners = new Set<(value: unknown) => void>();
-  let last: unknown = NONE;
+  let last: unknown;
 
   const read = (source: CookieSource): unknown => {
     try {
@@ -59,12 +58,13 @@ export const bind = (key: string, def: Def, prefix: string, options: CookieOptio
     return fallback;
   };
 
-  // Notify listeners and update `<html>` when the value differs from the last one seen.
+  // Update `<html>` every time: while nothing subscribes `last` goes stale as the
+  // provider, other tabs or the server move the DOM. Notify only when the value differs.
   const check = () => {
     const value = get();
+    if (targets) apply(targets, kind, domOf(kind, value));
     if (!Object.is(value, last)) {
       last = value;
-      if (targets) apply(targets, kind, domOf(kind, value));
       listeners.forEach((listener) => listener(value));
     }
   };
@@ -90,7 +90,6 @@ export const bind = (key: string, def: Def, prefix: string, options: CookieOptio
       if (!hasDom()) return () => {};
       if (!listeners.size) {
         hub(check, true);
-        last = NONE;
         check();
       }
       listeners.add(listener);
