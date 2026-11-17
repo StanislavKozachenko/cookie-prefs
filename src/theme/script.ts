@@ -98,9 +98,7 @@ export const pauseTransitions = (nonce: string | undefined) => {
   document.head.appendChild(css);
   return () => {
     // Read a computed value to force a restyle with transitions off, then re-enable.
-    restyle();
+    void getComputedStyle(document.documentElement).opacity;
     setTimeout(() => css.remove(), 1);
   };
 };
-
-const restyle = () => getComputedStyle(document.documentElement).opacity;
