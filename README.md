@@ -1,6 +1,9 @@
 # cookie-prefs
 
+![cookie-prefs: typed user preferences the server knows before the first render](.github/social-preview.png)
+
 [![npm](https://img.shields.io/npm/v/cookie-prefs.svg)](https://www.npmjs.com/package/cookie-prefs)
+[![npm downloads](https://img.shields.io/npm/dm/cookie-prefs.svg)](https://www.npmjs.com/package/cookie-prefs)
 [![CI](https://github.com/StanislavKozachenko/cookie-prefs/actions/workflows/ci.yml/badge.svg)](https://github.com/StanislavKozachenko/cookie-prefs/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
