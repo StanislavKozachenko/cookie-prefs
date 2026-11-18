@@ -10,3 +10,9 @@ e2e/.apps/
 e2e/.tmp/
 e2e/report/
 e2e/results/
+demo/node_modules/
+demo/.next/
+demo/out/
+demo/.vercel/
+demo/next-env.d.ts
+demo/*.tsbuildinfo
