@@ -55,6 +55,7 @@ src/react/index.tsx   cookie-prefs/react
 src/next/index.tsx    cookie-prefs/next
 src/theme/index.tsx   cookie-prefs/theme
 e2e/                  Next.js app template and Playwright suite (not published)
+demo/                 live demo, a standalone Next.js app using cookie-prefs from npm (not published)
 ```
 
 Tests go in the `__tests__` folder next to the code they cover: `src/core/__tests__/`, `src/react/__tests__/`, `src/next/__tests__/` and `src/theme/__tests__/`. Vitest runs `*.test.ts` and `*.test.tsx`; `*.test-d.ts` files are type tests, checked by `npm run typecheck`.
