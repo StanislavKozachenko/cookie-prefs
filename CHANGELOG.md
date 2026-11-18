@@ -10,6 +10,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ---
 
+## [0.1.3] - 2026-11-18
+
+### Changed
+
+- add the demo gif, a live demo link and a when-to-use table to the readme (#74)
+- add a live demo app (#70)
+- allow the unpatched picomatch advisory in the dependency audit (#72)
+
+---
+
 ## [0.1.2] - 2026-11-17
 
 ### Fixed
