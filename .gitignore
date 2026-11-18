@@ -16,3 +16,5 @@ demo/out/
 demo/.vercel/
 demo/next-env.d.ts
 demo/*.tsbuildinfo
+demo/gif/node_modules/
+demo/gif/.take/

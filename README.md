@@ -1,11 +1,13 @@
 # cookie-prefs
 
-![cookie-prefs: typed user preferences the server knows before the first render](.github/social-preview.png)
+![A preference is changed and saved as a cookie; after a reload the localStorage version jumps from the server's defaults while the cookie-prefs version is already right](.github/demo.gif)
 
 [![npm](https://img.shields.io/npm/v/cookie-prefs.svg)](https://www.npmjs.com/package/cookie-prefs)
 [![npm downloads](https://img.shields.io/npm/dm/cookie-prefs.svg)](https://www.npmjs.com/package/cookie-prefs)
 [![CI](https://github.com/StanislavKozachenko/cookie-prefs/actions/workflows/ci.yml/badge.svg)](https://github.com/StanislavKozachenko/cookie-prefs/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+**[Live demo](https://cookie-prefs.vercel.app)**: the same dashboard on cookies and on `localStorage`, [side by side](https://cookie-prefs.vercel.app/compare). The side-by-side reload in the recording above is throttled (1.6 Mbps, 4x CPU slowdown) to keep the first paint on screen.
 
 Typed, cookie-backed user preferences for React and Next.js: theme, sidebar, density, locale, anything small. nuqs keeps state in the URL; cookie-prefs keeps it in cookies, so the server knows it before the first render.
 
@@ -15,6 +17,20 @@ Typed, cookie-backed user preferences for React and Next.js: theme, sidebar, den
 - Typed end to end; invalid or missing cookies read as the default and never throw.
 - The core has zero dependencies and fits a 2 kB gzip budget. `react` and `next` are optional peer dependencies.
 - `cookie-prefs/theme` is an API-compatible replacement for [next-themes](https://github.com/pacocoursey/next-themes) (its last release, 0.4.6, was in March 2025) that stores the choice in a cookie.
+
+## When to use what
+
+|                                           | `localStorage`                    | URL state ([nuqs](https://nuqs.dev)) | next-themes        | cookie-prefs                  |
+| ----------------------------------------- | --------------------------------- | ------------------------------------ | ------------------ | ----------------------------- |
+| Meant for                                 | client-only state                 | state worth sharing as a link        | the theme          | small per-user preferences    |
+| The server knows it before rendering      | No                                | Yes                                  | No                 | Yes                           |
+| Server-rendered content matches on reload | No, corrected after hydration     | Yes                                  | Theme class only   | Yes                           |
+| Typed                                     | By hand                           | Yes                                  | Theme names        | Yes                           |
+| Synced across tabs                        | By hand (`storage` event)         | No                                   | Yes                | Yes                           |
+| Travels with a shared link                | No                                | Yes                                  | No                 | No                            |
+| Sent with every request                   | No                                | Yes, in the URL                      | No                 | Yes, so keep it small         |
+
+They combine: filters and pagination belong in the URL, the theme and layout in cookies.
 
 ## Install
 
