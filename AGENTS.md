@@ -17,6 +17,8 @@ One package, four entries, each with its own source file:
 
 The core internals (`builder`, `cookie`, `store`, `sync`, `reflect`, `types`, `standard-schema`) live in `src/core/`; `src/index.ts` is the entry that puts them together. Tests live in `__tests__` next to the code they cover: `src/core/__tests__/` (the core entry and its internals), `src/react/__tests__/`, `src/next/__tests__/` and `src/theme/__tests__/`. `*.test-d.ts` files are type tests, checked by `npm run typecheck` and never run; `src/core/__tests__/types.test-d.ts` pins the public types of every entry.
 
+`demo/` is the live demo, a standalone Next.js app (own `package.json` and lockfile) that installs `cookie-prefs` from npm, not from `src/`; it is deployed on Vercel with root directory `demo` and CI type-checks and builds it (see `demo/README.md`).
+
 Status: core, `cookie-prefs/react`, `cookie-prefs/next` and `cookie-prefs/theme` are implemented. `docs/design.md` is the contract.
 
 ## Commands
