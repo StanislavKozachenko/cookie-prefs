@@ -1,6 +1,6 @@
 # cookie-prefs demo
 
-The live demo of [cookie-prefs](https://github.com/StanislavKozachenko/cookie-prefs): one mock dashboard, built twice.
+The live demo of [cookie-prefs](https://github.com/StanislavKozachenko/cookie-prefs), deployed at [cookie-prefs.vercel.app](https://cookie-prefs.vercel.app): one mock dashboard, built twice.
 
 | Route            | What it shows                                                                                                                                                                                                     |
 | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

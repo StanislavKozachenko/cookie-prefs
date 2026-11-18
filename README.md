@@ -7,6 +7,8 @@
 [![CI](https://github.com/StanislavKozachenko/cookie-prefs/actions/workflows/ci.yml/badge.svg)](https://github.com/StanislavKozachenko/cookie-prefs/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
+**[Live demo](https://cookie-prefs.vercel.app)**: the same dashboard on cookies and on `localStorage`, [side by side](https://cookie-prefs.vercel.app/compare). The side-by-side reload in the recording above is throttled (1.6 Mbps, 4x CPU slowdown) to keep the first paint on screen.
+
 Typed, cookie-backed user preferences for React and Next.js: theme, sidebar, density, locale, anything small. nuqs keeps state in the URL; cookie-prefs keeps it in cookies, so the server knows it before the first render.
 
 - Readable in Server Components and on the client, with no hydration flash.
