@@ -25,3 +25,16 @@ npm run typecheck
 ## Deploy on Vercel
 
 Import the repository and set **Root Directory** to `demo`. Everything else stays on the defaults (framework preset Next.js, `npm install`, `next build`). The demo needs no environment variables and makes no external requests; the Geist fonts are self-hosted from the `geist` package.
+
+## The README GIF
+
+`gif/` holds the scripts that record `.github/demo.gif`, with their own `package.json` so the demo itself stays free of them. With the production build running (`npm run build && npm start`):
+
+```sh
+cd demo/gif
+npm ci
+npx playwright-core install chromium
+npm run gif        # record.mjs, captions.mjs, compose.mjs -> ../../.github/demo.gif
+```
+
+`record.mjs` drives the demo and logs a timeline (cursor, clicks, zooms, captions); `captions.mjs` renders the caption pills; `compose.mjs` builds the GIF from the frames and the timeline. The side-by-side reload is recorded with network and CPU throttling (1.6 Mbps, 150 ms latency, 4x CPU slowdown) so the first paint stays on screen long enough to see; the pause frame is the last one before the `localStorage` page reports hydration.
