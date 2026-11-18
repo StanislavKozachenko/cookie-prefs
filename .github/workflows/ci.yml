@@ -41,8 +41,9 @@ jobs:
         with:
           node-version: 24
 
+      # The exceptions, each with its reason, are listed in the script.
       - name: Fail on high or critical advisories
-        run: npm audit --audit-level=high
+        run: node .github/scripts/audit.mjs
 
   react-18:
     name: React 18 compatibility
