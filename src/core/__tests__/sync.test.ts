@@ -106,6 +106,20 @@ describe('CookieStore change event', () => {
     off();
   });
 
+  it('sets no timer: the event comes with the cookie', () => {
+    vi.useFakeTimers();
+    const { change } = stubStore();
+    const prefs = make();
+    const listener = vi.fn();
+    const off = prefs.theme.subscribe(listener);
+    otherTabWrites('theme=dark');
+    change();
+    expect(listener.mock.calls).toEqual([['dark']]);
+    expect(vi.getTimerCount()).toBe(0);
+    off();
+    vi.useRealTimers();
+  });
+
   it('stops notifying after unsubscribe', () => {
     const { change } = stubStore();
     const prefs = make();
@@ -205,6 +219,152 @@ describe('BroadcastChannel fallback', () => {
     const off = prefs.theme.subscribe(listener);
     prefs.theme.set('dark');
     expect(listener).toHaveBeenCalledWith('dark');
+    off();
+  });
+});
+
+// In a real browser the message can arrive before the written cookie shows in this tab's
+// `document.cookie` (Firefox in most runs without CookieStore, Chromium under load).
+describe('BroadcastChannel message before the cookie', () => {
+  /** The schedule: re-checks 16, 48, 112, 240, 496, 1008, 2032 and 4080 ms after the message. */
+  const LAST = 4080;
+
+  const setup = () => {
+    vi.useFakeTimers();
+    const { Channel } = fakeChannels();
+    const prefs = make();
+    const message = () => new Channel('cookie-prefs').postMessage(0);
+    return { prefs, message };
+  };
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it('picks up the cookie when it lands after the message, notifying once', () => {
+    const { prefs, message } = setup();
+    const listener = vi.fn();
+    const off = prefs.sidebar.subscribe(listener);
+    message(); // the other tab wrote sidebar=false, not visible here yet
+    expect(listener).not.toHaveBeenCalled();
+    const snapshots = [prefs.sidebar.get()];
+    for (let t = 1; t <= LAST + 100; t++) {
+      if (t == 30) otherTabWrites('sidebar=false');
+      vi.advanceTimersByTime(1);
+      snapshots.push(prefs.sidebar.get());
+      if (t == 47) expect(listener).not.toHaveBeenCalled();
+      if (t == 48) expect(listener.mock.calls).toEqual([[false]]);
+    }
+    expect(listener.mock.calls).toEqual([[false]]);
+    expect(document.documentElement.getAttribute('data-sidebar')).toBe('false');
+    // the snapshot goes from the old value to the new one once and never back
+    const flip = snapshots.indexOf(false);
+    expect(flip).toBe(30);
+    expect(snapshots.slice(0, flip).every((v) => v === true)).toBe(true);
+    expect(snapshots.slice(flip).every((v) => v === false)).toBe(true);
+    expect(vi.getTimerCount()).toBe(0);
+    off();
+  });
+
+  it('notifies nothing when nothing changed, and stops after the last re-check', () => {
+    const { prefs, message } = setup();
+    const listener = vi.fn();
+    const off = prefs.theme.subscribe(listener);
+    const reads = vi.spyOn(Document.prototype, 'cookie', 'get');
+    message();
+    vi.advanceTimersByTime(LAST - 1);
+    expect(vi.getTimerCount()).toBe(1);
+    vi.advanceTimersByTime(1);
+    expect(vi.getTimerCount()).toBe(0);
+    expect(reads).toHaveBeenCalledTimes(9); // on the message, then 8 timers
+    expect(listener).not.toHaveBeenCalled();
+    // a cookie later than that waits for the tab to be shown again
+    otherTabWrites('theme=dark');
+    vi.runAllTimers();
+    expect(listener).not.toHaveBeenCalled();
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(listener.mock.calls).toEqual([['dark']]);
+    off();
+  });
+
+  it('starts over on a new message, with one timer at a time', () => {
+    const { prefs, message } = setup();
+    const listener = vi.fn();
+    const off = prefs.theme.subscribe(listener);
+    message();
+    vi.advanceTimersByTime(1000);
+    message();
+    message();
+    expect(vi.getTimerCount()).toBe(1);
+    vi.advanceTimersByTime(LAST - 1);
+    otherTabWrites('theme=dark');
+    vi.advanceTimersByTime(1);
+    expect(listener.mock.calls).toEqual([['dark']]);
+    expect(vi.getTimerCount()).toBe(0);
+    off();
+  });
+
+  it('still drops the echo of this tab’s own writes', () => {
+    const { prefs } = setup();
+    const listener = vi.fn();
+    const other = make(); // another definePrefs in this tab, same cookie name
+    const otherListener = vi.fn();
+    const offs = [prefs.theme.subscribe(listener), other.theme.subscribe(otherListener)];
+    prefs.theme.set('dark'); // posts; this tab's listening channel gets it too
+    vi.runAllTimers();
+    expect(listener.mock.calls).toEqual([['dark']]);
+    expect(otherListener.mock.calls).toEqual([['dark']]);
+    offs.forEach((off) => off());
+  });
+
+  it('clears the timer after the last unsubscribe', () => {
+    const { prefs, message } = setup();
+    const off = prefs.theme.subscribe(() => {});
+    message();
+    expect(vi.getTimerCount()).toBe(1);
+    off();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('clears the timer when a re-check’s listener unsubscribes the last pref', () => {
+    const { prefs, message } = setup();
+    const listener = vi.fn(() => off());
+    const off = prefs.theme.subscribe(listener);
+    message();
+    otherTabWrites('theme=dark');
+    vi.advanceTimersByTime(16);
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('sets no timer in a hidden tab, which re-checks when shown', () => {
+    const { prefs, message } = setup();
+    const listener = vi.fn();
+    const off = prefs.theme.subscribe(listener);
+    const state = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+    message();
+    expect(vi.getTimerCount()).toBe(0);
+    otherTabWrites('theme=dark');
+    state.mockReturnValue('visible');
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(listener.mock.calls).toEqual([['dark']]);
+    off();
+  });
+
+  it('never throws from a re-check, even when reading the cookie throws', () => {
+    const { prefs, message } = setup();
+    const listener = vi.fn();
+    const off = prefs.theme.subscribe(listener);
+    vi.spyOn(Document.prototype, 'cookie', 'get').mockImplementation(() => {
+      throw new DOMException('blocked', 'SecurityError');
+    });
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    expect(() => {
+      message();
+      vi.runAllTimers();
+    }).not.toThrow();
+    expect(listener).not.toHaveBeenCalled();
     off();
   });
 });
