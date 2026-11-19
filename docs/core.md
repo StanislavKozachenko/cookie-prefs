@@ -74,10 +74,10 @@ A cookie holding `cozy` then reads as `'comfortable'` everywhere: `get()`, `read
 
 `usePref(pref)` returns `[value, setValue]`. Every component using the same pref stays in sync, also across tabs.
 
-`usePrefs(prefs)` from `cookie-prefs/react/batch` reads several at once: pass the record from `definePrefs` or any record of its handles. It has its own entry, so apps that do not use it do not ship it.
+`usePrefs(prefs)` reads several at once: pass the record from `definePrefs` or any record of its handles. The package is ESM with `sideEffects: false`, so apps that do not use it do not ship it.
 
 ```tsx
-import { usePrefs } from 'cookie-prefs/react/batch'
+import { usePrefs } from 'cookie-prefs/react'
 
 const [{ theme, sidebar }, set] = usePrefs(prefs)
 set({ sidebar: (open) => !open, theme: 'dark' }) // partial patch, one re-render

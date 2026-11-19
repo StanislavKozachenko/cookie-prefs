@@ -12,7 +12,7 @@ cookie-prefs is at 0.1.3 on npm. The core, `cookie-prefs/react`, `cookie-prefs/s
 - [x] SSR outside Next.js is covered by a React Router 7 app in the end-to-end suite (#88)
 - [x] The stored theme can be read on the server with `readTheme` and `getTheme` (#89)
 - [x] `<meta name="theme-color">` follows the theme with the opt-in `ThemeColor` from `cookie-prefs/theme/color` (#90)
-- [x] Several prefs in one hook with `usePrefs` from `cookie-prefs/react/batch` (#93)
+- [x] Several prefs in one hook with `usePrefs` from `cookie-prefs/react` (#93)
 
 ## Before 1.0
 
@@ -24,7 +24,7 @@ cookie-prefs is at 0.1.3 on npm. The core, `cookie-prefs/react`, `cookie-prefs/s
 
 ## What 1.0 promises
 
-- Semantic versioning for every entry in `exports` of [package.json](../package.json): `cookie-prefs`, `cookie-prefs/react`, `cookie-prefs/react/batch`, `cookie-prefs/next`, `cookie-prefs/script`, `cookie-prefs/theme`, `cookie-prefs/theme/server`, `cookie-prefs/theme/next` and `cookie-prefs/theme/color`.
+- Semantic versioning for every entry in `exports` of [package.json](../package.json): `cookie-prefs`, `cookie-prefs/react`, `cookie-prefs/next`, `cookie-prefs/script`, `cookie-prefs/theme`, `cookie-prefs/theme/server`, `cookie-prefs/theme/next` and `cookie-prefs/theme/color`.
 - What no entry exports, or what the source marks as internal, is not part of the promise.
 - The supported ranges are the peer dependencies: `react` `>=18` and `next` `>=14`, both optional. CI runs the unit tests on Node.js 22 and 24 on Linux, Windows and macOS, the type check and tests against React 18, and the end-to-end suite against Next.js 14.2.35 (React 18.3.1), 15.5.29 and 16.4.6 (React 19.3.1; versions pinned in [e2e/versions.json](../e2e/versions.json)), plus a React Router 7 app. The ranges are open-ended, so newer majors are untested until CI is updated.
 - The gzip size budgets in `size-limit` of [package.json](../package.json) are enforced in CI. The core entry stays within 2 KB.
