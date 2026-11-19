@@ -38,7 +38,7 @@ They combine: filters and pagination belong in the URL, the theme and layout in 
 npm install cookie-prefs
 ```
 
-Peer dependencies, both optional: `react >=18` (for `cookie-prefs/react`, `cookie-prefs/react/batch`, `cookie-prefs/next`, `cookie-prefs/theme`) and `next >=14` (for `cookie-prefs/next`).
+Peer dependencies, both optional: `react >=18` (for `cookie-prefs/react`, `cookie-prefs/next`, `cookie-prefs/theme`) and `next >=14` (for `cookie-prefs/next`).
 
 ## Quick start (Next.js App Router)
 
@@ -87,10 +87,10 @@ export function SidebarToggle() {
 }
 ```
 
-Several at once with `usePrefs` from `cookie-prefs/react/batch`, which takes a partial patch:
+Several at once with `usePrefs`, which takes a partial patch:
 
 ```tsx
-import { usePrefs } from 'cookie-prefs/react/batch'
+import { usePrefs } from 'cookie-prefs/react'
 
 const [{ theme, sidebar }, set] = usePrefs(prefs)
 set({ sidebar: false, theme: 'dark' })
@@ -126,8 +126,7 @@ export async function setLocale(locale: string) {
 | Import                | What it is                                                                     | Guide |
 | --------------------- | ------------------------------------------------------------------------------ | ----- |
 | `cookie-prefs`        | Core, no DOM required: `definePrefs`, `pref.*`, `readPrefs`, `snapshotPrefs`   | [Core](docs/core.md) |
-| `cookie-prefs/react`  | `usePref`, and `PrefsProvider` for SSR outside Next.js                         | [Core](docs/core.md#cookie-prefsreact-outside-nextjs) |
-| `cookie-prefs/react/batch` | `usePrefs`, several prefs in one hook with a partial-patch setter         | [Core](docs/core.md#cookie-prefsreact-outside-nextjs) |
+| `cookie-prefs/react`  | `usePref`, `usePrefs`, and `PrefsProvider` for SSR outside Next.js             | [Core](docs/core.md#cookie-prefsreact-outside-nextjs) |
 | `cookie-prefs/script` | `prefsScript`, the pre-paint script for `PrefsProvider` outside Next.js        | [Core](docs/core.md#cookie-prefsreact-outside-nextjs) |
 | `cookie-prefs/next`   | Server-only: `PrefsProvider`, `getPrefs` (App Router)                          | [Next.js](docs/nextjs.md) |
 | `cookie-prefs/theme`  | next-themes compatible `ThemeProvider` and `useTheme`                          | [Theme](docs/theme.md) |

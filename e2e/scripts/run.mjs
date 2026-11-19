@@ -9,6 +9,7 @@
 //   test  install the browsers, then `playwright test` (Chromium, Firefox and WebKit) against the production
 //         server of that app (`next start`, `react-router-serve`)
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -94,6 +95,13 @@ if (todo.includes('app') && !reactRouter) {
     // npm would keep a previously installed copy of the tarball: always install the fresh one.
     fs.rmSync(path.join(appDir, 'node_modules', 'cookie-prefs'), { recursive: true, force: true });
     timed('app install', () => run('npm', ['install', '--no-audit', '--no-fund', '--no-package-lock', '--prefer-offline'], appDir));
+    // The webpack cache in .next/cache (Next 14 and 15) treats node_modules as managed: a package counts as unchanged
+    // while its name and version are, so a rebuilt package with the same version would be served from the cache.
+    // Stamp the installed copy with the tarball's hash, so the cache is reused only for the very same package.
+    const installed = path.join(appDir, 'node_modules', 'cookie-prefs', 'package.json');
+    const pkg = JSON.parse(fs.readFileSync(installed, 'utf8'));
+    pkg.version = `${pkg.version.split('+')[0]}+${createHash('sha256').update(fs.readFileSync(tarball)).digest('hex').slice(0, 16)}`;
+    fs.writeFileSync(installed, JSON.stringify(pkg, null, 2) + '\n');
     timed('app build', () => run('npx', ['next', 'build'], appDir));
   });
 }

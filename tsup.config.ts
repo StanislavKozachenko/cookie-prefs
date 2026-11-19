@@ -2,13 +2,12 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { defineConfig } from 'tsup';
 
 /** Entries that are client modules and must start with the `'use client'` directive. */
-const client = ['react/index', 'react/batch/index', 'theme/index', 'theme/color/index'];
+const client = ['react/index', 'theme/index', 'theme/color/index'];
 
 export default defineConfig({
   entry: {
     index: 'src/index.ts',
     'react/index': 'src/react/index.tsx',
-    'react/batch/index': 'src/react/batch/index.tsx',
     'next/index': 'src/next/index.tsx',
     'script/index': 'src/script/index.ts',
     'theme/index': 'src/theme/index.tsx',
