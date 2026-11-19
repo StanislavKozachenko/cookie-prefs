@@ -17,7 +17,7 @@ cookie-prefs is at 0.1.3 on npm. The core, `cookie-prefs/react`, `cookie-prefs/s
 ## Before 1.0
 
 - [ ] A manual check on real Safari, on macOS and on iOS, of the 7-day cap on script-written cookies and of the refresh that works around it (see [security notes](security.md)). Playwright's WebKit does not apply tracking prevention, so the end-to-end suite cannot show this.
-- [ ] Cross-tab sync without `CookieStore`, through the `BroadcastChannel` fallback, is covered by an end-to-end test.
+- [x] Cross-tab sync without `CookieStore`, through the `BroadcastChannel` fallback, is covered by an end-to-end test (#97, #101).
 - [ ] A 0.x release after which no breaking change is needed: the API stays as it is for one more minor release.
 - [ ] The [live demo](../demo/) runs on that release.
 - [ ] No bug is open in the issue tracker.
