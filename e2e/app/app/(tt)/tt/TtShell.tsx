@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode } from 'react';
 import { ThemeProvider } from 'cookie-prefs/theme';
+import { ThemeColor } from 'cookie-prefs/theme/color';
 
 /** Holds ThemeProvider props in state so a test can change them after hydration. */
 export function TtShell({ nonce, children }: { nonce: string | undefined; children: ReactNode }) {
@@ -17,6 +18,7 @@ export function TtShell({ nonce, children }: { nonce: string | undefined; childr
       disableTransitionOnChange={disable}
       nonce={nonce}
     >
+      <ThemeColor colors={{ light: '#ffffff', dark: '#0a0a0a' }} nonce={nonce} />
       <div>
         <button data-testid="prop-attribute" onClick={() => setAttribute((a) => (a === 'class' ? 'data-theme' : 'class'))}>attribute</button>
         <button data-testid="prop-disable" onClick={() => setDisable((d) => !d)}>disableTransitionOnChange</button>
