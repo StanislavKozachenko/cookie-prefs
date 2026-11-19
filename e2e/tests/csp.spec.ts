@@ -54,7 +54,9 @@ test.describe('CSP with nonce (middleware / proxy)', () => {
   });
 
   test('negative control: without the nonce prop the same page violates the policy', async ({ page, context, env, watch }) => {
-    watch.ignore.push(/Content Security Policy/); // the expected CSP reports
+    // the expected CSP reports: "Content Security Policy" in Chromium and WebKit, "Content-Security-Policy:" in Firefox
+    const cspReport = /Content[- ]Security[- ]Policy/i;
+    watch.ignore.push(cspReport);
     await seed(context, env.baseURL, COOKIES);
     await recordCsp(page);
     await recordEarly(page);
@@ -71,7 +73,7 @@ test.describe('CSP with nonce (middleware / proxy)', () => {
     // the transition-disabling style is blocked too
     await page.getByTestId('set-light').click();
     await expect.poll(async () => (await cspViolations(page)).some((v) => v.startsWith('style-src-elem'))).toBe(true);
-    expect(consoleErrors.some((t) => /Content Security Policy/i.test(t))).toBe(true);
+    expect(consoleErrors.some((t) => cspReport.test(t))).toBe(true);
   });
 });
 
