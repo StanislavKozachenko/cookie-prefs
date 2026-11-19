@@ -1,11 +1,13 @@
-// Builds one e2e app for a Next major and runs the Playwright suite against it.
+// Builds one e2e app, for a Next major or React Router, and runs its Playwright suite against it.
 //
-//   node e2e/scripts/run.mjs <14|15|16> [pack] [app] [test] [-- playwright args]
+//   node e2e/scripts/run.mjs <14|15|16|react-router> [pack] [app] [test] [-- playwright args]
 //
 // With no step names all three run in order:
 //   pack  build the package at this commit and `npm pack` it to e2e/.tmp/cookie-prefs.tgz
-//   app   materialise e2e/.apps/next<major> from e2e/app, install it (the tarball included) and `next build`
-//   test  install the browsers, then `playwright test` (Chromium, Firefox and WebKit) against `next start` of that app
+//   app   Next: materialise e2e/.apps/next<major> from e2e/app, install it (the tarball included) and `next build`
+//         React Router: `npm ci` in e2e/react-router, install the tarball over it, typecheck and `react-router build`
+//   test  install the browsers, then `playwright test` (Chromium, Firefox and WebKit) against the production
+//         server of that app (`next start`, `react-router-serve`)
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -20,15 +22,17 @@ const dash = argv.indexOf('--');
 const playwrightArgs = dash === -1 ? [] : argv.slice(dash + 1);
 const [major, ...steps] = (dash === -1 ? argv : argv.slice(0, dash));
 const versions = JSON.parse(fs.readFileSync(path.join(e2e, 'versions.json'), 'utf8'));
-if (!major || !(major in versions)) {
-  console.error(`usage: node e2e/scripts/run.mjs <${Object.keys(versions).join('|')}> [pack] [app] [test] [-- playwright args]`);
+// React Router is not generated from a template: e2e/react-router is the app, with its own package.json and lockfile.
+const reactRouter = major === 'react-router';
+if (!major || !(major in versions || reactRouter)) {
+  console.error(`usage: node e2e/scripts/run.mjs <${[...Object.keys(versions), 'react-router'].join('|')}> [pack] [app] [test] [-- playwright args]`);
   process.exit(2);
 }
 const all = ['pack', 'app', 'test'];
 const todo = steps.length ? steps : all;
 for (const s of todo) if (!all.includes(s)) throw new Error(`unknown step "${s}"`);
 
-const appDir = path.join(e2e, '.apps', `next${major}`);
+const appDir = reactRouter ? path.join(e2e, 'react-router') : path.join(e2e, '.apps', `next${major}`);
 const run = (cmd, args, cwd, env = {}) => {
   console.log(`\n> ${cwd === root ? '.' : path.relative(root, cwd)}: ${cmd} ${args.join(' ')}`);
   execFileSync(cmd, args, { cwd, stdio: 'inherit', env: { ...process.env, NEXT_TELEMETRY_DISABLED: '1', ...env } });
@@ -51,7 +55,20 @@ if (todo.includes('pack')) {
   });
 }
 
-if (todo.includes('app')) {
+if (todo.includes('app') && reactRouter) {
+  timed('app', () => {
+    if (!fs.existsSync(tarball)) throw new Error('no tarball: run the "pack" step first');
+    timed('app install', () => {
+      run('npm', ['ci', '--no-audit', '--no-fund', '--prefer-offline'], appDir);
+      // The packed package is not in package.json, so the committed lockfile stays valid whatever the tarball holds.
+      run('npm', ['install', '--no-save', '--no-audit', '--no-fund', '--prefer-offline', tarball], appDir);
+    });
+    timed('app typecheck', () => run('npm', ['run', 'typecheck'], appDir));
+    timed('app build', () => run('npm', ['run', 'build'], appDir));
+  });
+}
+
+if (todo.includes('app') && !reactRouter) {
   timed('app', () => {
     if (!fs.existsSync(tarball)) throw new Error('no tarball: run the "pack" step first');
     // Template files are replaced, node_modules and .next/cache are kept so a second run is fast.
@@ -90,5 +107,5 @@ if (todo.includes('test')) {
     a === '--project' ? [playwrightArgs[i + 1]] : a.startsWith('--project=') ? [a.slice('--project='.length)] : [],
   );
   run('npx', ['playwright', 'install', ...(picked.length && picked.every((p) => browsers.includes(p)) ? picked : browsers)], e2e);
-  timed('test', () => run('npx', ['playwright', 'test', ...playwrightArgs], e2e, { E2E_NEXT: major }));
+  timed('test', () => run('npx', ['playwright', 'test', ...playwrightArgs], e2e, reactRouter ? { E2E_APP: 'react-router' } : { E2E_NEXT: major }));
 }
