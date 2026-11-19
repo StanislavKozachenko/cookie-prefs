@@ -32,6 +32,27 @@ updates:
       prefix-development: chore
       include: scope
 
+  # The React Router e2e app tests v7: majors (react-router 8, TypeScript 7) are moved by hand.
+  - package-ecosystem: npm
+    directory: /e2e/react-router
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Europe/Minsk
+    open-pull-requests-limit: 1
+    labels: [dependencies]
+    commit-message:
+      prefix: chore
+      prefix-development: chore
+      include: scope
+    groups:
+      e2e-react-router:
+        patterns: ['*']
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
+
   - package-ecosystem: npm
     directory: /demo
     schedule:
