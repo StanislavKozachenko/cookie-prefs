@@ -1,6 +1,6 @@
 {
   "name": "cookie-prefs",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "description": "Typed cookie-backed user preference state for React and Next.js",
   "keywords": [
     "react",

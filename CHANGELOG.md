@@ -10,6 +10,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ---
 
+## [0.2.0] - 2026-11-19
+
+### Breaking
+
+- move prefsScript to cookie-prefs/script (#78)
+
+### Added
+
+- export usePrefs from cookie-prefs/react (#100)
+- add the usePrefs hook (#93)
+- manage the theme-color meta tag (#92)
+- add a server-side getTheme helper (#89)
+- migrate renamed enum values with .migrate() (#85)
+
+### Fixed
+
+- keep the other tab in sync when the broadcast outruns the cookie (#101)
+
+### Changed
+
+- run the e2e jobs in the playwright container image (#103)
+- cover cross-tab sync without cookiestore in e2e (#97)
+- add the criteria for 1.0 (#96)
+- add a react router v7 ssr app to the e2e suite (#88)
+- run the e2e suite in firefox and webkit (#84)
+- watch the demo apps with dependabot (#81)
+
+---
+
 ## [0.1.3] - 2026-11-18
 
 ### Changed
