@@ -25,9 +25,7 @@ import {
   type NextPrefsProviderProps,
 } from '../../next/index';
 import * as core from '../../index';
-import { PrefsProvider, usePref, type PrefSetter } from '../../react/index';
-import * as react from '../../react/index';
-import { usePrefs, type PrefsSetter } from '../../react/batch/index';
+import { PrefsProvider, usePref, usePrefs, type PrefSetter, type PrefsSetter } from '../../react/index';
 import { prefsScript } from '../../script/index';
 import { ThemeProvider, useTheme, type ThemeProviderProps, type UseThemeProps } from '../../theme/index';
 import { ThemeColor, type ThemeColorProps } from '../../theme/color/index';
@@ -208,9 +206,7 @@ const [locale] = usePref(prefs.locale);
 expectTypeOf(locale).toEqualTypeOf<string | undefined>();
 expectTypeOf(PrefsProvider).parameter(0).toHaveProperty('snapshot');
 
-// Batch hook, its own entry (`cookie-prefs/react/batch`): values typed like `readPrefs`, a
-// partial patch typed per key like each setter.
-expectTypeOf(react).not.toHaveProperty('usePrefs');
+// Batch hook: values typed like `readPrefs`, a partial patch typed per key like each setter.
 const [all, setAll] = usePrefs(prefs);
 expectTypeOf(all).toEqualTypeOf<PrefValues<typeof prefs>>();
 expectTypeOf(all.theme).toEqualTypeOf<'light' | 'dark' | 'system'>();
