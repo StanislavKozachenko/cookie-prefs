@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as z from 'zod';
-import { definePrefs, pref, prefsScript, type PrefsRecord } from '../../index';
+import { definePrefs, pref, type PrefsRecord } from '../../index';
+import { prefsScript } from '../../script/index';
 import { reapply } from '../reapply';
 
 const html = document.documentElement;

@@ -1,8 +1,7 @@
 import { builder, type Def } from './core/builder';
 import { rawOf } from './core/cookie';
-import { script, type Reflection } from './core/reflect';
 import type { InferSchemaInput, InferSchemaOutput, StandardSchemaV1 } from './core/standard-schema';
-import { bind, REFLECTION } from './core/store';
+import { bind } from './core/store';
 import type {
   CookieSource,
   EnumPrefBuilder,
@@ -179,21 +178,5 @@ export function snapshotPrefs(prefs: PrefsRecord, source: CookieSource): PrefsSn
       }
       return [];
     }),
-  );
-}
-
-/**
- * Source of a blocking inline script that applies every `.reflect()` declaration to
- * `<html>` from `document.cookie` before first paint. Returns `''` when no pref
- * reflects. The output is fixed code plus escaped JSON config, safe to inline.
- * @example
- * <script nonce={nonce} dangerouslySetInnerHTML={{ __html: prefsScript(prefs) }} />
- */
-export function prefsScript(prefs: PrefsRecord): string;
-export function prefsScript(prefs: PrefsRecord): string {
-  return script(
-    Object.values(prefs)
-      .map((handle) => (handle as { [REFLECTION]?: Reflection })[REFLECTION])
-      .filter((r): r is Reflection => !!r),
   );
 }

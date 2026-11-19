@@ -1,5 +1,6 @@
 import { cookies, headers } from 'next/headers.js';
-import { prefsScript, readPrefs, snapshotPrefs } from 'cookie-prefs';
+import { readPrefs, snapshotPrefs } from 'cookie-prefs';
+import { prefsScript } from 'cookie-prefs/script';
 import { PrefsProvider as ClientPrefsProvider } from 'cookie-prefs/react';
 import type { ReactElement, ReactNode } from 'react';
 import type { PrefsRecord, PrefsSnapshot, PrefValues } from '../core/types';
@@ -87,17 +88,15 @@ export interface NextPrefsProviderProps<P extends PrefsRecord> {
 export async function PrefsProvider<P extends PrefsRecord>({
   prefs,
   mode,
-  nonce,
-  children,
+  ...props
 }: NextPrefsProviderProps<P>): Promise<ReactElement> {
   return (
     <ClientPrefsProvider
+      // `nonce` and `children`; `prefs` stays on the server
+      {...props}
       // Script mode (the default) must not touch request APIs, or the whole route becomes dynamic.
       snapshot={mode == 'server' ? await requestSnapshot(prefs) : undefined}
       script={prefsScript(prefs)}
-      nonce={nonce}
-    >
-      {children}
-    </ClientPrefsProvider>
+    />
   );
 }

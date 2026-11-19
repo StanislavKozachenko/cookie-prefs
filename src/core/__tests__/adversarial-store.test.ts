@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as z from 'zod';
-import { definePrefs, pref, prefsScript } from '../../index';
+import { definePrefs, pref } from '../../index';
+import { prefsScript } from '../../script/index';
 
 // Attacks on the store: re-entrant listeners, handles sharing a cookie, writes behind
 // its back, its per-raw-string cache, subscription churn and hostile environments.

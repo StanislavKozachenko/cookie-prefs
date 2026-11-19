@@ -12,7 +12,7 @@ describe('two copies of the core', () => {
     const a = await load();
     const b = await load();
     expect(b).not.toBe(a);
-    expect(b.prefsScript).not.toBe(a.prefsScript);
+    expect(b.readPrefs).not.toBe(a.readPrefs);
 
     const prefs = a.definePrefs(
       {
@@ -25,8 +25,6 @@ describe('two copies of the core', () => {
     );
     const header = 'app.theme=dark; app.sidebar=false; app.locale=de; other=1';
 
-    expect(a.prefsScript(prefs)).not.toBe('');
-    expect(b.prefsScript(prefs)).toBe(a.prefsScript(prefs));
     expect(b.readPrefs(prefs, header)).toEqual(a.readPrefs(prefs, header));
     expect(b.snapshotPrefs(prefs, header)).toEqual(a.snapshotPrefs(prefs, header));
   });

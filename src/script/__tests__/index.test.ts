@@ -2,7 +2,9 @@
 import { parse } from 'acorn';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as z from 'zod';
-import { definePrefs, pref, prefsScript, type PrefsRecord } from '../../index';
+import { definePrefs, pref, type PrefsRecord } from '../../index';
+import * as entry from '../index';
+import { prefsScript } from '../index';
 
 const html = document.documentElement;
 
@@ -52,6 +54,10 @@ const makeHostile = () =>
       .default(hostile)
       .reflect('data-x', { b: '<!-- &    -->' }),
   });
+
+it('exports the script api', () => {
+  expect(Object.keys(entry)).toEqual(['prefsScript']);
+});
 
 describe('prefsScript', () => {
   it('returns an empty string when no pref reflects', () => {

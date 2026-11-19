@@ -5,7 +5,6 @@ it('exports the core api', () => {
   expect(Object.keys(entry).sort()).toEqual([
     'definePrefs',
     'pref',
-    'prefsScript',
     'readPrefs',
     'snapshotPrefs',
   ]);
