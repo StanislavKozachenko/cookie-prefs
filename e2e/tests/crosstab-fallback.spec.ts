@@ -4,7 +4,9 @@ import { test, expect, hydrated, htmlState } from './fixtures';
 // Cross-tab sync where CookieStore is missing (Safari before 18.4, Firefox before 140). The three Playwright
 // browsers all have it, so these tests take it away. The core feature-detects through `globalThis.cookieStore`
 // only (src/core/sync.ts): without it every write posts on a `BroadcastChannel('cookie-prefs')` and the hub listens
-// on one, and `visibilitychange` to visible re-checks whatever nothing announced.
+// on one, and `visibilitychange` to visible re-checks whatever nothing announced. The message can reach the other tab
+// before the cookie does (most often in Firefox), so the hub re-checks for a few seconds after it: these tests failed
+// in most Firefox runs without that.
 
 type Api = 'cookieStore' | 'BroadcastChannel';
 
@@ -55,14 +57,6 @@ async function shown(page: Page) {
 const QUIET_MS = 1000;
 
 test.describe('crosstab without CookieStore: BroadcastChannel fallback', () => {
-  // The other tab can get the message while its `document.cookie` still holds the old value (the cookie reaches its
-  // renderer / content process asynchronously): it re-reads, sees no change, and nothing re-checks once the cookie
-  // lands, so it stays stale until it is shown again. Seen in most Firefox runs and in some Chromium runs under load.
-  test.fixme(
-    ({ browserName }) => browserName !== 'webkit',
-    'the channel message can overtake the cookie: the other tab re-reads the old value and stays stale',
-  );
-
   for (const mode of ['script', 'server'] as const) {
     test(`${mode} mode: a change in one tab shows up in the other without reload`, async ({ context }) => {
       await remove(context, ['cookieStore']);
