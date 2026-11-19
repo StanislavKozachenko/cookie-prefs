@@ -12,7 +12,7 @@ export default defineConfig({
   globalTimeout: 10 * 60_000, // a hang must not burn the job
   expect: { timeout: 7_000 },
   fullyParallel: true,
-  workers: process.env.WORKERS ? Number(process.env.WORKERS) : 4,
+  workers: process.env.WORKERS ? Number(process.env.WORKERS) : ci ? 2 : 4,
   retries: ci ? 1 : 0,
   forbidOnly: ci,
   reporter: ci ? [['github'], ['html', { open: 'never', outputFolder: 'report' }]] : [['dot']],
