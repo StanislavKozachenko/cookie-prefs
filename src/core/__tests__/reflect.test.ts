@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { parse } from 'acorn';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as z from 'zod';
