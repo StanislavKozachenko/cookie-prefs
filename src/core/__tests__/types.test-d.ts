@@ -26,6 +26,8 @@ import {
 } from '../../next/index';
 import * as core from '../../index';
 import { PrefsProvider, usePref, type PrefSetter } from '../../react/index';
+import * as react from '../../react/index';
+import { usePrefs, type PrefsSetter } from '../../react/batch/index';
 import { prefsScript } from '../../script/index';
 import { ThemeProvider, useTheme, type ThemeProviderProps, type UseThemeProps } from '../../theme/index';
 import { ThemeColor, type ThemeColorProps } from '../../theme/color/index';
@@ -205,6 +207,46 @@ setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
 const [locale] = usePref(prefs.locale);
 expectTypeOf(locale).toEqualTypeOf<string | undefined>();
 expectTypeOf(PrefsProvider).parameter(0).toHaveProperty('snapshot');
+
+// Batch hook, its own entry (`cookie-prefs/react/batch`): values typed like `readPrefs`, a
+// partial patch typed per key like each setter.
+expectTypeOf(react).not.toHaveProperty('usePrefs');
+const [all, setAll] = usePrefs(prefs);
+expectTypeOf(all).toEqualTypeOf<PrefValues<typeof prefs>>();
+expectTypeOf(all.theme).toEqualTypeOf<'light' | 'dark' | 'system'>();
+expectTypeOf(all.locale).toEqualTypeOf<string | undefined>();
+expectTypeOf(setAll).toEqualTypeOf<PrefsSetter<typeof prefs>>();
+setAll({});
+setAll({ theme: 'dark', sidebar: (open) => !open, columns: ['a'] });
+setAll({
+  locale: (prev) => {
+    expectTypeOf(prev).toEqualTypeOf<string | undefined>();
+    return prev ?? 'de';
+  },
+});
+setAll({ pageSize: (n) => n + 1, since: new Date(), filters: { q: '', page: 1 } });
+// @ts-expect-error a value outside the enum
+setAll({ theme: 'blue' });
+// @ts-expect-error a value of another type
+setAll({ sidebar: 'yes' });
+// @ts-expect-error an updater must return the pref's type
+setAll({ pageSize: (n) => String(n) });
+// @ts-expect-error a key the record does not have
+setAll({ colour: 'red' });
+// @ts-expect-error clear with `reset()`, not `undefined` (under `exactOptionalPropertyTypes`)
+setAll({ locale: undefined });
+// A sub-record of handles, and a transforming schema: written with its input, read as its output.
+const { stamp } = definePrefs({ stamp: pref.json(z.string().transform((s) => s.length)).default(0) });
+const [sub, setSub] = usePrefs({ theme: prefs.theme, stamp });
+expectTypeOf(sub).toEqualTypeOf<{ theme: 'light' | 'dark' | 'system'; stamp: number }>();
+setSub({ stamp: 'abc' });
+setSub({ stamp: (prev) => String(prev) });
+// @ts-expect-error writes take the schema input
+setSub({ stamp: 3 });
+// @ts-expect-error not part of the sub-record
+setSub({ sidebar: false });
+// @ts-expect-error a record of handles only
+usePrefs({ theme: pref.enum(['a']) });
 
 // Next.js server API.
 expectTypeOf(getPrefs(prefs)).resolves.toEqualTypeOf<PrefValues<typeof prefs>>();
