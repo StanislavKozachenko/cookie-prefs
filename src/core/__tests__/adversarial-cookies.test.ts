@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as z from 'zod';
-import { definePrefs, pref, prefsScript, readPrefs, snapshotPrefs, type PrefsRecord } from '../../index';
+import { definePrefs, pref, readPrefs, snapshotPrefs, type PrefsRecord } from '../../index';
+import { prefsScript } from '../../script/index';
 import { reapply } from '../../react/reapply';
 
 // Attacks on every path that reads a pref cookie: the client (`get()` and the store's

@@ -1,5 +1,6 @@
 import { cookies, headers } from 'next/headers.js';
-import { prefsScript, readPrefs, snapshotPrefs } from 'cookie-prefs';
+import { readPrefs, snapshotPrefs } from 'cookie-prefs';
+import { prefsScript } from 'cookie-prefs/script';
 import { PrefsProvider as ClientPrefsProvider } from 'cookie-prefs/react';
 import type { ReactElement, ReactNode } from 'react';
 import type { PrefsRecord, PrefsSnapshot, PrefValues } from '../core/types';

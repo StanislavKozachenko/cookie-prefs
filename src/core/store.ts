@@ -5,11 +5,12 @@ import { hub, post } from './sync';
 import type { CookieInit, CookieOptions, CookieSource, PrefOptions } from './types';
 
 /**
- * Key of a handle's reflection config, for `prefsScript()`. Kept on the handle under a
- * global symbol, not in a module-level map, so a second copy of the core (ESM + CJS,
- * two versions) reads it too. Bump the suffix when the `Reflection` layout changes.
+ * Key of a handle's reflection config, for `prefsScript()` (`src/script/index.ts`
+ * repeats it). Kept on the handle under a global symbol, not in a module-level map, so
+ * the script entry and a second copy of the core (ESM + CJS, two versions) read it too.
+ * Bump the suffix in both places when the `Reflection` layout changes.
  */
-export const REFLECTION = Symbol.for('cookie-prefs.reflection.1');
+const REFLECTION = Symbol.for('cookie-prefs.reflection.1');
 
 /** Turn a builder into a `Pref` handle (typed by the caller). */
 export const bind = (key: string, def: Def, prefix: string, options: CookieOptions) => {

@@ -58,6 +58,16 @@
         "default": "./dist/next/index.cjs"
       }
     },
+    "./script": {
+      "import": {
+        "types": "./dist/script/index.d.ts",
+        "default": "./dist/script/index.js"
+      },
+      "require": {
+        "types": "./dist/script/index.d.cts",
+        "default": "./dist/script/index.cjs"
+      }
+    },
     "./theme": {
       "import": {
         "types": "./dist/theme/index.d.ts",
@@ -77,6 +87,9 @@
       ],
       "next": [
         "./dist/next/index.d.ts"
+      ],
+      "script": [
+        "./dist/script/index.d.ts"
       ],
       "theme": [
         "./dist/theme/index.d.ts"
@@ -120,6 +133,12 @@
       "ignore": [
         "cookie-prefs"
       ]
+    },
+    {
+      "name": "cookie-prefs/script",
+      "path": "dist/script/index.js",
+      "limit": "570 B",
+      "gzip": true
     },
     {
       "name": "cookie-prefs/theme",

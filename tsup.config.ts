@@ -9,6 +9,7 @@ export default defineConfig({
     index: 'src/index.ts',
     'react/index': 'src/react/index.tsx',
     'next/index': 'src/next/index.tsx',
+    'script/index': 'src/script/index.ts',
     'theme/index': 'src/theme/index.tsx',
   },
   format: ['esm', 'cjs'],

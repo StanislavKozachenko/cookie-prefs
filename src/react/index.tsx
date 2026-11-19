@@ -83,14 +83,14 @@ export interface PrefsProviderProps {
    */
   snapshot?: PrefsSnapshot | undefined;
   /**
-   * Inline script from `prefsScript()`. Rendered once as the provider's first child, so
-   * place the provider at the top of `<body>`. Only the first value is rendered; a
-   * later one is still applied on `<html>`. It runs before paint on the initial
-   * document and is inert on the client, so React does not warn about it. The
-   * provider applies its reflections again with plain DOM calls, without running it,
-   * on mount (React can reset `<html>` attributes on remount) and whenever the tab
-   * becomes visible, so reflections also follow changes made in other tabs to prefs
-   * that nothing in this tab subscribes to.
+   * Inline script from `prefsScript()` (`cookie-prefs/script`). Rendered once as the
+   * provider's first child, so place the provider at the top of `<body>`. Only the
+   * first value is rendered; a later one is still applied on `<html>`. It runs before
+   * paint on the initial document and is inert on the client, so React does not warn
+   * about it. The provider applies its reflections again with plain DOM calls, without
+   * running it, on mount (React can reset `<html>` attributes on remount) and whenever
+   * the tab becomes visible, so reflections also follow changes made in other tabs to
+   * prefs that nothing in this tab subscribes to.
    */
   script?: string | undefined;
   /**

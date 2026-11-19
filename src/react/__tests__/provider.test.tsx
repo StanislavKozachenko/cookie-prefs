@@ -3,7 +3,8 @@ import { createRoot, hydrateRoot, type Root } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import * as z from 'zod';
-import { definePrefs, pref, prefsScript, snapshotPrefs, type PrefsRecord } from '../../index';
+import { definePrefs, pref, snapshotPrefs, type PrefsRecord } from '../../index';
+import { prefsScript } from '../../script/index';
 import { PrefsProvider, usePref, type PrefsProviderProps } from '../index';
 
 beforeAll(() => {

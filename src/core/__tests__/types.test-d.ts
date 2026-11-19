@@ -13,6 +13,7 @@ import {
   type Pref,
   type PrefOptions,
   type PrefsOptions,
+  type PrefsRecord,
   type PrefsSnapshot,
   type PrefValue,
   type PrefValues,
@@ -22,7 +23,9 @@ import {
   PrefsProvider as NextPrefsProvider,
   type NextPrefsProviderProps,
 } from '../../next/index';
+import * as core from '../../index';
 import { PrefsProvider, usePref, type PrefSetter } from '../../react/index';
+import { prefsScript } from '../../script/index';
 import { ThemeProvider, useTheme, type ThemeProviderProps, type UseThemeProps } from '../../theme/index';
 
 const prefs = definePrefs({
@@ -113,6 +116,11 @@ expectTypeOf(values.theme).toEqualTypeOf<'light' | 'dark' | 'system'>();
 expectTypeOf(values.locale).toEqualTypeOf<string | undefined>();
 expectTypeOf(snapshotPrefs(prefs, { theme: 'dark' })).toEqualTypeOf<PrefsSnapshot>();
 expectTypeOf(prefs.sidebar.read(null)).toEqualTypeOf<boolean>();
+
+// Pre-paint script: its own entry, `cookie-prefs/script`, so the core does not carry it.
+expectTypeOf(prefsScript).toEqualTypeOf<(prefs: PrefsRecord) => string>();
+expectTypeOf(prefsScript(prefs)).toEqualTypeOf<string>();
+expectTypeOf(core).not.toHaveProperty('prefsScript');
 
 // Next.js cookie stores are valid sources and sinks.
 declare const nextCookies: Awaited<ReturnType<typeof cookies>>;

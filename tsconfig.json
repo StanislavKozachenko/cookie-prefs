@@ -14,7 +14,8 @@
     "noEmit": true,
     "paths": {
       "cookie-prefs": ["./src/index.ts"],
-      "cookie-prefs/react": ["./src/react/index.tsx"]
+      "cookie-prefs/react": ["./src/react/index.tsx"],
+      "cookie-prefs/script": ["./src/script/index.ts"]
     }
   },
   "include": ["src", "*.config.ts"]
