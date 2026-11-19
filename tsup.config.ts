@@ -2,7 +2,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { defineConfig } from 'tsup';
 
 /** Entries that are client modules and must start with the `'use client'` directive. */
-const client = ['react/index', 'theme/index'];
+const client = ['react/index', 'theme/index', 'theme/color/index'];
 
 export default defineConfig({
   entry: {
@@ -13,6 +13,7 @@ export default defineConfig({
     'theme/index': 'src/theme/index.tsx',
     'theme/server/index': 'src/theme/server/index.ts',
     'theme/next/index': 'src/theme/next/index.ts',
+    'theme/color/index': 'src/theme/color/index.tsx',
   },
   format: ['esm', 'cjs'],
   dts: true,

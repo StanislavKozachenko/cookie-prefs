@@ -98,6 +98,16 @@
         "default": "./dist/theme/next/index.cjs"
       }
     },
+    "./theme/color": {
+      "import": {
+        "types": "./dist/theme/color/index.d.ts",
+        "default": "./dist/theme/color/index.js"
+      },
+      "require": {
+        "types": "./dist/theme/color/index.d.cts",
+        "default": "./dist/theme/color/index.cjs"
+      }
+    },
     "./package.json": "./package.json"
   },
   "typesVersions": {
@@ -119,6 +129,9 @@
       ],
       "theme/next": [
         "./dist/theme/next/index.d.ts"
+      ],
+      "theme/color": [
+        "./dist/theme/color/index.d.ts"
       ]
     }
   },
@@ -188,6 +201,15 @@
       "name": "cookie-prefs/theme/next",
       "path": "dist/theme/next/index.js",
       "limit": "200 B",
+      "gzip": true,
+      "ignore": [
+        "cookie-prefs"
+      ]
+    },
+    {
+      "name": "cookie-prefs/theme/color",
+      "path": "dist/theme/color/index.js",
+      "limit": "1030 B",
       "gzip": true,
       "ignore": [
         "cookie-prefs"

@@ -1,5 +1,6 @@
 // Compile-time contract for the public API. Checked by `npm run typecheck`; never executed.
 import type { cookies } from 'next/headers';
+import type { ReactElement } from 'react';
 import { expectTypeOf } from 'vitest';
 import * as z from 'zod';
 import {
@@ -27,6 +28,7 @@ import * as core from '../../index';
 import { PrefsProvider, usePref, type PrefSetter } from '../../react/index';
 import { prefsScript } from '../../script/index';
 import { ThemeProvider, useTheme, type ThemeProviderProps, type UseThemeProps } from '../../theme/index';
+import { ThemeColor, type ThemeColorProps } from '../../theme/color/index';
 import { getTheme, type ThemeOptions as NextThemeOptions } from '../../theme/next/index';
 import { readTheme, type ThemeOptions } from '../../theme/server/index';
 
@@ -271,3 +273,16 @@ expectTypeOf(getTheme()).toEqualTypeOf<Promise<string>>();
 expectTypeOf(getTheme({ themes: ['light', 'dark'] })).toEqualTypeOf<Promise<'light' | 'dark' | 'system'>>();
 expectTypeOf<NextThemeOptions>().toEqualTypeOf<ThemeOptions>();
 expectTypeOf<ThemeOptions<'a'>['themes']>().toEqualTypeOf<readonly 'a'[] | undefined>();
+
+// theme-color: a colour per theme name, plus the nonce of the inline script.
+expectTypeOf(ThemeColor).parameter(0).toEqualTypeOf<ThemeColorProps>();
+expectTypeOf(ThemeColor).returns.toEqualTypeOf<ReactElement>();
+expectTypeOf<ThemeColorProps['colors']>().toEqualTypeOf<Readonly<Record<string, string>>>();
+expectTypeOf<ThemeColorProps['nonce']>().toEqualTypeOf<string | undefined>();
+void ThemeColor({ colors: { light: '#fff', dark: '#000', sepia: 'rgb(112 66 20)' }, nonce: maybeNonce });
+const palette = { light: '#fff', dark: '#000' } as const;
+void ThemeColor({ colors: palette });
+// @ts-expect-error the colours are required
+void ThemeColor({});
+// @ts-expect-error a colour is a string
+void ThemeColor({ colors: { dark: 0 } });
