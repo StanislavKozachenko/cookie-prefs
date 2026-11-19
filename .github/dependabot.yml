@@ -69,6 +69,10 @@ updates:
     groups:
       demo:
         patterns: ['*']
+    # cookie-prefs is moved by the Demo bump workflow (demo-bump.yml) right after each release; a held-back
+    # bump that needs a demo fix would otherwise also block every other update in this group.
+    ignore:
+      - dependency-name: cookie-prefs
 
   - package-ecosystem: npm
     directory: /demo/gif

@@ -10,7 +10,7 @@ The live demo of [cookie-prefs](https://github.com/StanislavKozachenko/cookie-pr
 
 Add `?embed=1` to `/` or `/local-storage` to hide the demo's own navigation; the compare page loads both that way.
 
-The demo installs `cookie-prefs` from npm, not from the repository's `src/`, so it also checks a real install. The preferences are defined once in [`app/prefs.ts`](app/prefs.ts).
+The demo installs `cookie-prefs` from npm, not from the repository's `src/`, so it also checks a real install. After each release the Demo bump workflow opens a pull request that moves it to the new version (see [CONTRIBUTING.md](../CONTRIBUTING.md#the-demo-after-a-release)); Dependabot updates everything else. The preferences are defined once in [`app/prefs.ts`](app/prefs.ts).
 
 ## Run locally
 

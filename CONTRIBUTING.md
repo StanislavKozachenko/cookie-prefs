@@ -86,6 +86,17 @@ Releases are published by the maintainer with the manual **Release** workflow (A
 
 The workflow checks and builds first, then publishes to npm, then commits the version bump and changelog to `main`, creates the tag and the GitHub release. If a step after the publish fails, fix the cause and re-run with the same bump: the publish is skipped when that version is already on npm. If the bump commit already landed, do not re-run; create the missing tag and release by hand.
 
+### The demo after a release
+
+The demo (`demo/`) installs `cookie-prefs` from npm. When a Release run succeeds, the **Demo bump** workflow (`demo-bump.yml`) moves it to the new version; it is a separate workflow, so nothing in it can fail or undo the release.
+
+1. It takes the version from `package.json` on `main` and waits (up to 15 minutes) until npm can install it: a fresh publish takes a few minutes to become installable.
+2. It sets `cookie-prefs` to `^<version>` in `demo/package.json` and `demo/package-lock.json`, and fails if npm changed anything else in the lockfile. If the demo is already on that version it stops there.
+3. It commits both files to `chore/demo-cookie-prefs-<version>` through the API (a Verified commit, like the release bump) and opens the pull request `chore(demo): bump cookie-prefs to <version>` with `RELEASE_TOKEN`, so CI runs on it.
+4. It enables auto-merge (squash): the pull request merges when `CI ok` is green and Vercel deploys the demo from `main`. If the `Demo app` job fails, the release changed something the demo uses; the pull request stays open until the demo is fixed on its branch.
+
+To run it by hand (a Release run that failed after publishing, or a re-run): Actions, Demo bump, Run workflow, with the version or empty for the one in `package.json` on `main`. Re-runs reuse the branch and the open pull request. `RELEASE_TOKEN` needs pull request write access for this, besides contents. Dependabot ignores `cookie-prefs` in `demo/`; this workflow owns it.
+
 ### First release
 
 Trusted publishing can only be configured for a package that already exists on npm, so 0.1.0 is published by hand. Later releases come from the workflow and carry a provenance attestation; the manually published 0.1.0 has none.
