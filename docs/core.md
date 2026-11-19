@@ -90,6 +90,36 @@ import { prefsScript } from 'cookie-prefs/script'
 
 The client must hydrate with the same snapshot the server rendered with: pass it down (loader data, serialized props, an inline JSON script) and give it to the client `PrefsProvider`. During SSR and hydration `usePref` returns the value from the nearest provider's `snapshot`, or the default when there is none. Without the snapshot on the client, hooks render defaults while the server HTML holds the cookie values, and React reports a hydration mismatch. The pre-paint script changes `<html>` attributes before hydration, so put `suppressHydrationWarning` on `<html>` (in the Pages Router, in `_document`).
 
+In React Router 7 (framework mode, SSR), compute the snapshot in the root loader and render the provider in the root `Layout`, which renders `<html>` and `<body>`. `Layout` also renders the error boundary, so it reads the loader data with `useRouteLoaderData('root')`, which is `undefined` when the loader threw: the provider then renders defaults.
+
+```tsx
+// app/root.tsx
+export function loader({ request }: Route.LoaderArgs) {
+  return { snapshot: snapshotPrefs(prefs, request.headers.get('cookie')) }
+}
+
+export function Layout({ children }: { children: React.ReactNode }) {
+  const data = useRouteLoaderData<typeof loader>('root')
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <Meta />
+        <Links />
+      </head>
+      <body>
+        <PrefsProvider snapshot={data?.snapshot} script={prefsScript(prefs)}>
+          {children}
+        </PrefsProvider>
+        <ScrollRestoration />
+        <Scripts />
+      </body>
+    </html>
+  )
+}
+```
+
+Other loaders read values with `readPrefs(prefs, request.headers.get('cookie'))`. The snapshot only serves the server render and hydration: afterwards hooks read `document.cookie`, so the root loader does not need to run again on client-side navigations. [`e2e/react-router/`](../e2e/react-router/) is this setup as a working app, tested in Chromium, Firefox and WebKit.
+
 In the Pages Router, compute the snapshot in `getServerSideProps` and pass it to the provider in `_app`.
 
 See also: [Next.js guide](nextjs.md), [security and platform notes](security.md).

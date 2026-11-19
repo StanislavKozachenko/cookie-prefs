@@ -21,6 +21,15 @@ npm run e2e -- 16 test -- --project firefox   # one browser: chromium, firefox o
 
 The first run installs `e2e/`'s dependencies, and the `test` step installs the browsers it runs (all three, or those picked with `--project`). The browsers' system libraries need root and are not installed by the script: if a browser fails to launch for a missing library, run `cd e2e && sudo npx playwright install-deps chromium firefox webkit`. The app is generated into `e2e/.apps/next<major>` (gitignored) from `e2e/app/`, with the versions pinned in `e2e/versions.json`; the specs are in `e2e/tests/`. The app is built once per run and every browser tests the same `next start`. CI runs the three majors in parallel as the `e2e` job, each with all three browsers; on failure it uploads the Playwright report and traces.
 
+SSR outside Next.js is covered by `e2e/react-router/`, a React Router 7 app in framework mode with its own `package.json` and lockfile, and the specs in `e2e/tests/react-router/`. It takes the same steps and Playwright arguments:
+
+```bash
+npm run e2e -- react-router                         # pack, then npm ci, install the tarball, typecheck and build the app, run the tests
+npm run e2e -- react-router test -- --project chromium
+```
+
+The `app` step installs the tarball with `npm install --no-save`, so the committed lockfile does not change; the tests run against `react-router-serve` of the production build. CI runs it as the `e2e-react-router` job.
+
 Playwright's WebKit is not Safari: it does not reproduce Safari's tracking prevention, so the 7-day cap on script-written cookies (see [docs/security.md](docs/security.md)) is not covered by the suite.
 
 ## Submitting changes
@@ -60,7 +69,7 @@ src/next/index.tsx    cookie-prefs/next
 src/theme/index.tsx   cookie-prefs/theme
 src/theme/server/     cookie-prefs/theme/server
 src/theme/next/       cookie-prefs/theme/next
-e2e/                  Next.js app template and Playwright suite (not published)
+e2e/                  Next.js app template, React Router app and Playwright suite (not published)
 demo/                 live demo, a standalone Next.js app using cookie-prefs from npm (not published)
 ```
 

@@ -33,6 +33,7 @@ Status: core, `cookie-prefs/react`, `cookie-prefs/script`, `cookie-prefs/next`, 
 - `npm run check:package`: publint and arethetypeswrong (needs a build first)
 - `npm run size`: size-limit, 2 KB gzip budget on the core entry plus budgets for `cookie-prefs/react`, `cookie-prefs/script`, `cookie-prefs/next`, `cookie-prefs/theme`, `cookie-prefs/theme/server` and `cookie-prefs/theme/next` (needs a build first)
 - `npm run e2e -- <14|15|16>`: pack the package, build the Next app in `e2e/` for that major and run the Playwright suite in Chromium, Firefox and WebKit; see CONTRIBUTING.md. CI runs it as the `e2e` job; run it when a change touches `cookie-prefs/next`, `cookie-prefs/theme` or the inline script (`cookie-prefs/script`)
+- `npm run e2e -- react-router`: the same for the React Router 7 SSR app in `e2e/react-router/` (`cookie-prefs/react` with `snapshotPrefs` and `prefsScript` outside Next). CI runs it as the `e2e-react-router` job; run it when a change touches `cookie-prefs/react` or the inline script
 
 Run lint, typecheck, build, test, check:package and size before finishing a change.
 
