@@ -4,7 +4,7 @@ Builders, handles and server helpers of `cookie-prefs`, and `cookie-prefs/react`
 
 ## Builders
 
-`pref.enum([...])`, `pref.boolean()`, `pref.number()`, `pref.string()`, `pref.json(schema)` and `pref.custom({ parse, serialize })`. Each takes `.default(value)` (removes `undefined` from the read type) and `.options({ name, path, maxAge, ... })`; enum, boolean, number and string also take `.reflect(...)` (see [Reflection](reflection.md)).
+`pref.enum([...])`, `pref.boolean()`, `pref.number()`, `pref.string()`, `pref.json(schema)` and `pref.custom({ parse, serialize })`. Each takes `.default(value)` (removes `undefined` from the read type) and `.options({ name, path, maxAge, ... })`; enum, boolean, number and string also take `.reflect(...)` (see [Reflection](reflection.md)), and enums take `.migrate({ old: 'current' })` (see [Renamed enum values](#renamed-enum-values)).
 
 `pref.json` requires a synchronous [Standard Schema](https://standardschema.dev) validator (zod, valibot, arktype), because cookies are user-controlled input. Writes take the schema's input type, reads return its output. For anything else use `pref.custom`.
 
@@ -47,6 +47,24 @@ Other tabs' writes reach subscribers at once (CookieStore `change` events, or a 
 const { name, value, maxAge, ...options } = prefs.density.toCookie('compact')
 res.cookie(name, value, { ...options, maxAge: maxAge * 1000 })
 ```
+
+## Renamed enum values
+
+When an enum value is renamed or removed, every cookie that still holds it would read as the default. `.migrate()` maps old names to current values instead:
+
+```ts
+density: pref
+  .enum(['compact', 'comfortable'])
+  .default('comfortable')
+  .migrate({ cozy: 'comfortable' })
+  .reflect('class'),
+```
+
+A cookie holding `cozy` then reads as `'comfortable'` everywhere: `get()`, `read()`, `readPrefs`, `getPrefs`, hooks hydrating from a snapshot (`snapshotPrefs` keeps the raw `cozy`, which reads as `'comfortable'` on both sides), `.reflect()` and the pre-paint script, which sets the `comfortable` class before first paint. Reads never write: the cookie keeps `cozy` until the next `set()`, which writes the current name (`set((d) => d)` is enough). In Safari, which caps script-written cookies at 7 days, the once-per-page-load refresh of `usePref` re-writes only a cookie that already holds the exact current text, so a cookie with an old name is not refreshed and expires on its own schedule unless something calls `set()`.
+
+- Enums only. Each value must be a current value, and a key must not be one: TypeScript rejects both. In JavaScript, a key that is a current value is ignored (a current value always reads as itself) and a key mapped to anything else reads as the default.
+- One level: `{ cozy: 'comfortable' }`, not chains like `a → b → c`. Map every old name straight to its current value.
+- `.values` stays the list of current values. Calling `.migrate()` again adds to the map; like the other builder methods it returns a new builder and chains in any order.
 
 ## Cookie options and defaults
 

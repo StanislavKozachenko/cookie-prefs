@@ -187,6 +187,34 @@ describe('hydration', () => {
     const { recoverable, errors } = await hydrate(app(prefs, { snapshot: { theme: 'light' } }), markup);
     expect(recoverable.mock.calls.length + errors.mock.calls.length).toBeGreaterThan(0);
   });
+
+  it('hydrates a snapshot holding a migrated enum value without a mismatch', async () => {
+    const { density } = definePrefs({
+      density: pref
+        .enum(['compact', 'comfortable'])
+        .default('compact')
+        .migrate({ cozy: 'comfortable' })
+        .reflect('class'),
+    });
+    const Density = () => <p>{usePref(density)[0]}</p>;
+    const node = (snapshot: Record<string, string>) => (
+      <PrefsProvider snapshot={snapshot} script={prefsScript({ density })}>
+        <Density />
+      </PrefsProvider>
+    );
+    const header = 'density=cozy';
+    const snapshot = snapshotPrefs({ density }, header);
+    expect(snapshot).toEqual({ density: 'cozy' });
+    const markup = ssr(node(snapshot));
+    expect(markup).toContain('<p>comfortable</p>');
+    document.cookie = header;
+    const { container, errors, recoverable } = await hydrate(node(snapshot), markup);
+    expect(errors).not.toHaveBeenCalled();
+    expect(recoverable).not.toHaveBeenCalled();
+    expect(container.querySelector('p')!.textContent).toBe('comfortable');
+    expect(html.className).toBe('comfortable');
+    expect(document.cookie).toBe(header);
+  });
 });
 
 describe('inline script', () => {

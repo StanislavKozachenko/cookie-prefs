@@ -93,6 +93,15 @@ const configs: Record<string, () => PrefsRecord> = {
         .default('__proto__')
         .reflect(['data-q', 'class'], { ['__proto__']: 'proto' }),
     }),
+  'migrated enum values': () =>
+    definePrefs({
+      theme: pref
+        .enum(['light', 'dark', 'system'])
+        .default('system')
+        .migrate({ cozy: 'light', b: 'dark', ['__proto__']: 'light', toString: 'dark' })
+        .reflect(['class', 'data-theme'], { dark: 'is-dark' }),
+      mode: pref.enum(['a', 'ok']).migrate({ compact: 'ok', old: 'a' }).reflect(['data-mode', '--mode']),
+    }),
   'one bad pref': production(() =>
     definePrefs({
       bad: pref.enum(['a b', 'c']).default('a b').reflect(['data-bad-before', 'class', 'data-bad-after']),
@@ -113,6 +122,8 @@ const cookieStates = (prefs: PrefsRecord) => {
       'light',
       'dark',
       'compact',
+      'cozy',
+      'old',
       'b',
       'a',
       'ok',
@@ -201,6 +212,25 @@ describe('reapply', () => {
     reapply(prefsScript(named));
     expect(html.getAttribute('data-t')).toBe('b');
     expect(html.getAttribute('data-odd')).toBe('true');
+  });
+
+  it('applies the current value of a migrated enum value, like the client', () => {
+    const prefs = configs['migrated enum values']!();
+    for (const [theme, mode, className, attrs] of [
+      ['b', 'compact', 'keep is-dark', { 'data-theme': 'is-dark', 'data-mode': 'ok', style: '--mode: ok;' }],
+      ['__proto__', 'old', 'keep light', { 'data-theme': 'light', 'data-mode': 'a', style: '--mode: a;' }],
+      ['nope', 'nope', 'keep system', { 'data-theme': 'system' }],
+    ] as const) {
+      document.cookie = `theme=${theme}`;
+      document.cookie = `mode=${mode}`;
+      const client = () => Object.values(prefs).forEach((p) => p.subscribe(() => {})());
+      for (const run of [() => reapply(prefsScript(prefs)), client]) {
+        resetHtml();
+        html.className = 'keep is-dark light';
+        run();
+        expect(state()).toEqual({ className, attrs: { class: className, ...attrs }, style: attrs.style ?? '' });
+      }
+    }
   });
 
   it('removes what has no value and no default', () => {

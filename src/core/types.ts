@@ -161,6 +161,18 @@ export interface EnumPrefBuilder<T extends string, V = T | undefined> extends Pr
     target: EnumReflectTarget | readonly EnumReflectTarget[],
     value?: Partial<Record<T, string>>,
   ): EnumPrefBuilder<T, V>;
+  /**
+   * Read old (renamed or removed) values as current ones: a cookie holding a key of
+   * `map` reads as its value everywhere (`get()`, `read()`, `readPrefs`, hydration from
+   * a snapshot, reflection and the inline script). Reads never rewrite the cookie; the
+   * next `set()` writes the current name. One level only: a value must be a current
+   * value, and a key must not be one (a current value always reads as itself).
+   * Repeated calls add to the map.
+   * @example pref.enum(['compact', 'comfortable']).default('comfortable').migrate({ cozy: 'comfortable' })
+   */
+  migrate<const M extends Readonly<Record<string, T>>>(
+    map: M & { readonly [K in keyof M & T]?: never },
+  ): EnumPrefBuilder<T, V>;
 }
 
 /** A custom codec for `pref.custom()`. */

@@ -18,11 +18,27 @@ export const bind = (key: string, def: Def, prefix: string, options: CookieOptio
   const attrs = merge<PrefOptions>(defaults, options, def.o, { name }) as Omit<CookieInit, 'value'>;
   const fallback = def.d;
   const targets = def.r;
+  // Enums: each valid raw value to its value, so an old name from `.migrate()` reads as
+  // its current value. Current values come last, so each reads as itself even when the
+  // map has it as a key; an old name mapped to anything but a current value is dropped.
+  // A `Map`, so `toString` or a polluted `Object.prototype` is never a valid raw value.
+  const values = def.values;
+  const enums =
+    values &&
+    new Map(
+      Object.entries({ ...def.a })
+        .filter((e) => values.includes(e[1]))
+        .concat(values.map((v) => [v, v])),
+    );
   // Value map read by own keys, like the inline script: an enum value named `toString`
-  // must not pick up `Object.prototype.toString`.
-  const kind = def.values
-    ? Object.fromEntries(def.values.map((v) => [v, merge<Record<string, string>>({ [v]: v }, def.m)[v]!]))
+  // must not pick up `Object.prototype.toString`. Old names map to the DOM string of
+  // their current value, so the script and `apply` migrate without knowing about it.
+  const kind = enums
+    ? Object.fromEntries(
+        [...enums].map(([raw, v]) => [raw, merge<Record<string, string>>({ [v]: v }, def.m)[v]!]),
+      )
     : def.k;
+  const parse = enums ? (raw: string) => enums.get(raw) : def.p!;
   // Dev only (dropped from production builds). A cookie with an empty name is written
   // as a bare value, which no read path takes for a cookie of any name. `classList`
   // rejects an empty token or one with whitespace, so such a class would never be
@@ -49,7 +65,7 @@ export const bind = (key: string, def: Def, prefix: string, options: CookieOptio
       if (typeof raw == 'string' && raw.length <= 4096) {
         if (!cache.has(raw) || typeof document == 'undefined') {
           if (cache.size > 9) cache.clear();
-          cache.set(raw, def.p(raw));
+          cache.set(raw, parse(raw));
         }
         const value = cache.get(raw);
         if (value !== undefined) return value;

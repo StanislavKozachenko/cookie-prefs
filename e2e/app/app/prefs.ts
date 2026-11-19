@@ -4,7 +4,7 @@ import * as z from 'zod';
 export const prefs = definePrefs({
   theme: pref.enum(['light', 'dark', 'system']).default('system').reflect('class'),
   sidebar: pref.boolean().default(true).reflect('data-sidebar'),
-  density: pref.enum(['compact', 'cozy']).default('cozy').reflect('data-density'),
+  density: pref.enum(['compact', 'cozy']).default('cozy').migrate({ tight: 'compact' }).reflect('data-density'),
   pageSize: pref.number().default(25),
   locale: pref.string(),
   columns: pref.json(z.array(z.string())).default([]),

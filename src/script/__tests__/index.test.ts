@@ -266,3 +266,73 @@ describe('prefsScript', () => {
     expect(html.getAttribute('data-x')).toBe('<!-- & \u2028\u2029 -->');
   });
 });
+
+describe('prefsScript with .migrate()', () => {
+  const makeMigrated = () =>
+    definePrefs({
+      density: pref
+        .enum(['compact', 'comfortable'])
+        .default('comfortable')
+        .migrate({ cozy: 'comfortable', tight: 'compact' })
+        .reflect(['class', 'data-density', '--density'], { compact: 'is-compact' }),
+      mode: pref.enum(['a', 'b']).migrate({ old: 'b' }).reflect('data-mode'),
+    });
+
+  it('maps old names to the DOM string of their current value, with the same fixed source', () => {
+    const src = prefsScript(makeMigrated());
+    const config = JSON.parse(JSON.parse(src.slice(src.indexOf('})("') + 3, -1))) as unknown[];
+    expect(config).toEqual([
+      [
+        'density',
+        ['class', 'data-density', '--density'],
+        { cozy: 'comfortable', tight: 'is-compact', compact: 'is-compact', comfortable: 'comfortable' },
+        'comfortable',
+      ],
+      ['mode', ['data-mode'], { old: 'b', a: 'a', b: 'b' }, null],
+    ]);
+    const plain = prefsScript(make());
+    expect(src.slice(0, src.indexOf('})("'))).toBe(plain.slice(0, plain.indexOf('})("')));
+  });
+
+  it('applies the current value of an old name before paint and swaps classes', () => {
+    html.className = 'keep is-compact comfortable';
+    document.cookie = 'density=cozy';
+    document.cookie = 'mode=old';
+    run(makeMigrated());
+    expect(state()).toEqual({
+      class: 'keep comfortable',
+      attrs: {
+        class: 'keep comfortable',
+        'data-density': 'comfortable',
+        style: '--density: comfortable;',
+        'data-mode': 'b',
+      },
+    });
+    document.cookie = 'density=tight';
+    document.cookie = 'mode=nope';
+    run(makeMigrated());
+    expect(html.className).toBe('keep is-compact');
+    expect(html.getAttribute('data-density')).toBe('is-compact');
+    expect(html.hasAttribute('data-mode')).toBe(false);
+  });
+
+  it('matches what the client applies for old, current and unknown names', () => {
+    const values = ['cozy', 'tight', 'compact', 'comfortable', 'old', 'a', 'b', 'nope', '%74ight', '"cozy"'];
+    for (const value of values) {
+      clearCookies();
+      document.cookie = `density=${value}`;
+      document.cookie = `mode=${value}`;
+      for (const start of ['', 'keep is-compact comfortable']) {
+        resetHtml();
+        html.className = start;
+        const prefs = makeMigrated();
+        run(prefs);
+        const fromScript = state();
+        resetHtml();
+        html.className = start;
+        Object.values(prefs).forEach((p) => p.subscribe(() => {})());
+        expect(state(), `${value} | ${start}`).toEqual(fromScript);
+      }
+    }
+  });
+});
