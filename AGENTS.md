@@ -6,21 +6,23 @@ Instructions for coding agents working in this repository.
 
 cookie-prefs is typed cookie-backed user preference state for React and Next.js (theme, sidebar, density, locale): readable in Server Components and on the client, no hydration flash, cross-tab sync. The theme preset will be API-compatible with next-themes.
 
-One package, five entries, each with its own source file:
+One package, seven entries, each with its own source file:
 
-| Import                | Source                |
-| --------------------- | --------------------- |
-| `cookie-prefs`        | `src/index.ts`        |
-| `cookie-prefs/react`  | `src/react/index.tsx` |
-| `cookie-prefs/script` | `src/script/index.ts` |
-| `cookie-prefs/next`   | `src/next/index.tsx`  |
-| `cookie-prefs/theme`  | `src/theme/index.tsx` |
+| Import                      | Source                       |
+| --------------------------- | ---------------------------- |
+| `cookie-prefs`              | `src/index.ts`               |
+| `cookie-prefs/react`        | `src/react/index.tsx`        |
+| `cookie-prefs/script`       | `src/script/index.ts`        |
+| `cookie-prefs/next`         | `src/next/index.tsx`         |
+| `cookie-prefs/theme`        | `src/theme/index.tsx`        |
+| `cookie-prefs/theme/server` | `src/theme/server/index.ts`  |
+| `cookie-prefs/theme/next`   | `src/theme/next/index.ts`    |
 
-The core internals (`builder`, `cookie`, `store`, `sync`, `reflect`, `types`, `standard-schema`) live in `src/core/`; `src/index.ts` is the entry that puts them together. Tests live in `__tests__` next to the code they cover: `src/core/__tests__/` (the core entry and its internals), `src/react/__tests__/`, `src/script/__tests__/`, `src/next/__tests__/` and `src/theme/__tests__/`. `*.test-d.ts` files are type tests, checked by `npm run typecheck` and never run; `src/core/__tests__/types.test-d.ts` pins the public types of every entry.
+The core internals (`builder`, `cookie`, `store`, `sync`, `reflect`, `types`, `standard-schema`) live in `src/core/`; `src/index.ts` is the entry that puts them together. Tests live in `__tests__` next to the code they cover: `src/core/__tests__/` (the core entry and its internals), `src/react/__tests__/`, `src/script/__tests__/`, `src/next/__tests__/`, `src/theme/__tests__/`, `src/theme/server/__tests__/` and `src/theme/next/__tests__/`. `*.test-d.ts` files are type tests, checked by `npm run typecheck` and never run; `src/core/__tests__/types.test-d.ts` pins the public types of every entry.
 
 `demo/` is the live demo, a standalone Next.js app (own `package.json` and lockfile) that installs `cookie-prefs` from npm, not from `src/`; it is deployed on Vercel with root directory `demo` and CI type-checks and builds it (see `demo/README.md`).
 
-Status: core, `cookie-prefs/react`, `cookie-prefs/script`, `cookie-prefs/next` and `cookie-prefs/theme` are implemented. `docs/design.md` is the contract.
+Status: core, `cookie-prefs/react`, `cookie-prefs/script`, `cookie-prefs/next`, `cookie-prefs/theme`, `cookie-prefs/theme/server` and `cookie-prefs/theme/next` are implemented. `docs/design.md` is the contract.
 
 ## Commands
 
@@ -29,7 +31,7 @@ Status: core, `cookie-prefs/react`, `cookie-prefs/script`, `cookie-prefs/next` a
 - `npm run typecheck`: `tsc --noEmit`
 - `npm run lint`: ESLint flat config
 - `npm run check:package`: publint and arethetypeswrong (needs a build first)
-- `npm run size`: size-limit, 2 KB gzip budget on the core entry plus budgets for `cookie-prefs/react`, `cookie-prefs/script`, `cookie-prefs/next` and `cookie-prefs/theme` (needs a build first)
+- `npm run size`: size-limit, 2 KB gzip budget on the core entry plus budgets for `cookie-prefs/react`, `cookie-prefs/script`, `cookie-prefs/next`, `cookie-prefs/theme`, `cookie-prefs/theme/server` and `cookie-prefs/theme/next` (needs a build first)
 - `npm run e2e -- <14|15|16>`: pack the package, build the Next app in `e2e/` for that major and run the Playwright suite in Chromium, Firefox and WebKit; see CONTRIBUTING.md. CI runs it as the `e2e` job; run it when a change touches `cookie-prefs/next`, `cookie-prefs/theme` or the inline script (`cookie-prefs/script`)
 
 Run lint, typecheck, build, test, check:package and size before finishing a change.

@@ -14,7 +14,7 @@ Constraints to know before shipping, and what cookie-prefs deliberately does not
 
 ## Non-goals
 
-- A server-side theme helper (`getTheme`) and server rendering of the theme preset; `theme-color` management and a forced theme per page without a provider.
+- Server rendering of the theme preset itself (`ThemeProvider` stays script-only and `useTheme()` is `undefined` until hydration; the opt-in [`getTheme()` / `readTheme()`](theme.md#reading-the-theme-on-the-server) read the stored theme on the server); `theme-color` management and a forced theme per page without a provider.
 - Automatic `router.refresh()` after writes, and optimistic server sync.
 - Async validators, versioning of stored values (renamed enum values are covered by [`.migrate()`](core.md#renamed-enum-values)), encryption or signing.
 - `localStorage`, `sessionStorage` or a combined-cookie backend, and URL state (use nuqs).
