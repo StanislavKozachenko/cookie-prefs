@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { parse } from 'acorn';
 import { act, StrictMode, Suspense, useEffect, type ReactNode } from 'react';
 import { createRoot, hydrateRoot, type Root } from 'react-dom/client';

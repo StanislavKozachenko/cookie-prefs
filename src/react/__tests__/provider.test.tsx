@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { act, StrictMode, version, type ReactNode } from 'react';
 import { createRoot, hydrateRoot, type Root } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
