@@ -4,9 +4,11 @@ import { createRoot, hydrateRoot, type Root } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import * as z from 'zod';
-import { definePrefs, pref, snapshotPrefs, type PrefsRecord, type PrefValues } from '../../index';
-import { prefsScript } from '../../script/index';
-import { PrefsProvider, usePrefs, type PrefsSetter } from '../index';
+import { definePrefs, pref, snapshotPrefs, type PrefsRecord, type PrefValues } from '../../../index';
+import { prefsScript } from '../../../script/index';
+import { PrefsProvider } from '../../index';
+import * as entry from '../index';
+import { usePrefs, type PrefsSetter } from '../index';
 
 beforeAll(() => {
   (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -80,6 +82,10 @@ const probe = <P extends PrefsRecord>(record: () => P) => {
 };
 
 const defaults = { theme: 'system', sidebar: true, pageSize: 25, columns: [] };
+
+it('exports the batch api', () => {
+  expect(Object.keys(entry)).toEqual(['usePrefs']);
+});
 
 describe('usePrefs on the client', () => {
   it('reads every pref of the record from the cookie, typed like readPrefs', () => {
