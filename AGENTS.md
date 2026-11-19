@@ -25,7 +25,7 @@ Status: core, `cookie-prefs/react`, `cookie-prefs/script`, `cookie-prefs/next` a
 ## Commands
 
 - `npm run build`: tsup, ESM + CJS + d.ts into `dist/`
-- `npm test`: vitest (jsdom)
+- `npm test`: vitest, in the `node` environment; a test file that needs a DOM opts into jsdom with a `// @vitest-environment jsdom` comment at its top
 - `npm run typecheck`: `tsc --noEmit`
 - `npm run lint`: ESLint flat config
 - `npm run check:package`: publint and arethetypeswrong (needs a build first)
