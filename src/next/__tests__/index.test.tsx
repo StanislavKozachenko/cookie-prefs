@@ -107,6 +107,12 @@ describe('getPrefs', () => {
     expect(await getPrefs(make())).toEqual({ theme: 'system', sidebar: true, locale: undefined });
   });
 
+  it('reads an old enum name from .migrate() as its current value', async () => {
+    const prefs = definePrefs({ density: pref.enum(['compact', 'comfortable']).migrate({ cozy: 'comfortable' }) });
+    await request('density=cozy');
+    expect(await getPrefs(prefs)).toEqual({ density: 'comfortable' });
+  });
+
   it('takes the first of duplicate cookies, like the browser', async () => {
     // `density=cozy` at `/` and `density=compact` at `/sm`: on `/sm` the browser sends
     // the longer path first, and `document.cookie` and the inline script read it.

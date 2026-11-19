@@ -109,6 +109,46 @@ pref.json(z.string()).reflect('data-x');
 // @ts-expect-error default must match the enum
 pref.enum(['a', 'b']).default('c');
 
+// `.migrate()`: enums only, old names to current values, chainable in any order.
+const migrated = definePrefs({
+  density: pref.enum(['compact', 'comfortable']).default('comfortable').migrate({ cozy: 'comfortable' }),
+  mode: pref
+    .enum(['a', 'b'])
+    .migrate({ old: 'a', older: 'b' })
+    .reflect('class')
+    .options({ maxAge: 60 })
+    .migrate({ x: 'b' }),
+  // a map with keys named like `Object.prototype` members, and an enum with such a value
+  proto: pref.enum(['toString', 'b']).migrate({ ['__proto__']: 'b', constructor: 'toString', x: 'b' }),
+});
+expectTypeOf(migrated.density).toEqualTypeOf<Pref<'compact' | 'comfortable', 'compact' | 'comfortable'>>();
+expectTypeOf(migrated.mode).toEqualTypeOf<Pref<'a' | 'b', 'a' | 'b' | undefined>>();
+expectTypeOf(migrated.proto.get()).toEqualTypeOf<'toString' | 'b' | undefined>();
+expectTypeOf(pref.enum(['a', 'b']).migrate({ old: 'a' }).values).toEqualTypeOf<readonly ('a' | 'b')[]>();
+declare const wide: Record<string, 'a'>;
+pref.enum(['a', 'b']).migrate(wide);
+pref.enum(['a', 'b']).migrate({});
+// @ts-expect-error values must be current values
+pref.enum(['a', 'b']).migrate({ old: 'c' });
+// @ts-expect-error a key must not be a current value: it always reads as itself
+pref.enum(['a', 'b']).migrate({ a: 'b' });
+// @ts-expect-error not even mapped to itself
+pref.enum(['a', 'b']).default('a').migrate({ b: 'b', old: 'a' });
+// @ts-expect-error a value cannot be undefined
+pref.enum(['a', 'b']).migrate({ old: undefined });
+// @ts-expect-error no chains: a value cannot be another old name
+pref.enum(['a', 'b']).migrate({ older: 'old', old: 'a' });
+// @ts-expect-error only enums migrate
+pref.boolean().migrate({ yes: 'true' });
+// @ts-expect-error only enums migrate
+pref.number().default(1).migrate({});
+// @ts-expect-error only enums migrate
+pref.string().migrate({});
+// @ts-expect-error only enums migrate
+pref.json(z.string()).migrate({});
+// @ts-expect-error only enums migrate
+pref.custom({ parse: (raw) => raw, serialize: String }).migrate({});
+
 // Server reads.
 const values = readPrefs(prefs, 'theme=dark; app.sidebar=false');
 expectTypeOf(values).toEqualTypeOf<PrefValues<typeof prefs>>();

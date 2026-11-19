@@ -98,8 +98,7 @@ export interface PrefFactory {
  * })
  */
 export const pref: PrefFactory = {
-  enum: (values) =>
-    builder({ values, p: (raw) => (values.includes(raw) ? raw : undefined), s: String }),
+  enum: (values) => builder({ values, s: String }),
   boolean: () =>
     builder({
       k: { true: 'true', false: 'false' },

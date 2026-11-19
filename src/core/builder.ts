@@ -10,12 +10,17 @@ export type Kind = Readonly<Record<string, string>> | 0 | 1;
 
 /** Runtime state of a builder. Internal; never part of the public API. */
 export interface Def {
-  /** Raw (URI-decoded) cookie value to a value; `undefined` or a throw means invalid. */
-  p(raw: string): unknown;
+  /**
+   * Raw (URI-decoded) cookie value to a value; `undefined` or a throw means invalid.
+   * Absent for enums, which `bind` parses from `values` and `a`.
+   */
+  p?(raw: string): unknown;
   /** Value to the raw cookie string. */
   s(value: unknown): string;
   /** Enum values. Public as `EnumPrefBuilder.values`. */
   values?: readonly string[];
+  /** Enum old names to current values, from `.migrate()`. */
+  a?: Readonly<Record<string, string>>;
   k?: Kind;
   /** Default value. */
   d?: unknown;
@@ -28,13 +33,15 @@ export interface Def {
 
 /**
  * An immutable builder: every method returns a new one. Typed as `never` because the
- * public builder interfaces are enforced by `PrefFactory`, not by this helper.
+ * public builder interfaces are enforced by `PrefFactory`, not by this helper: every
+ * builder has `migrate` at runtime, only `EnumPrefBuilder` types it.
  */
 export const builder = (def: Def): never =>
   ({
     ...def,
     default: (d: unknown) => builder({ ...def, d }),
     options: (o: PrefOptions) => builder({ ...def, o: merge(def.o, o) }),
+    migrate: (a: Record<string, string>) => builder({ ...def, a: merge(def.a, a) }),
     reflect: (r: string | readonly string[], m?: Record<string, string>) =>
       builder({ ...def, r: ([] as string[]).concat(r), m }),
   }) as never;
