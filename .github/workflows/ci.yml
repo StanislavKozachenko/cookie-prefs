@@ -64,7 +64,7 @@ jobs:
   e2e:
     name: E2E on Next ${{ matrix.next }}
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -84,26 +84,32 @@ jobs:
       - run: npm ci --prefix e2e
       - run: npm run typecheck --prefix e2e
 
-      - name: Read the Playwright version
+      - name: Read the Playwright version and the runner image
         id: playwright
-        run: echo "version=$(node -p "require('./e2e/node_modules/@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "version=$(node -p "require('./e2e/node_modules/@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+          echo "image=$ImageOS-$ImageVersion" >> "$GITHUB_OUTPUT"
 
-      - name: Cache the Playwright browsers
-        id: browser
+      # The three browsers need about 140 MB of system packages, and apt mirrors are sometimes slow: apt downloads
+      # them into a folder that is cached with the browsers, so a cache hit installs them without downloading.
+      - name: Keep the downloaded system packages in a cacheable folder
+        run: |
+          mkdir -p ~/.cache/apt-archives/partial
+          printf 'Dir::Cache::Archives "%s";\nAPT::Keep-Downloaded-Packages "true";\n' ~/.cache/apt-archives | sudo tee /etc/apt/apt.conf.d/99-cacheable-archives
+
+      - name: Cache the Playwright browsers and their system packages
         uses: actions/cache@v6
         with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium-firefox-webkit
+          path: |
+            ~/.cache/ms-playwright
+            ~/.cache/apt-archives
+          key: playwright-${{ steps.playwright.outputs.image }}-${{ steps.playwright.outputs.version }}-chromium-firefox-webkit
 
-      # A cache hit restores the browsers only: the system libraries still have to be installed.
-      - name: Install Chromium, Firefox and WebKit
-        if: steps.browser.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps chromium firefox webkit
-        working-directory: e2e
-
-      - name: Install the system libraries for Chromium, Firefox and WebKit
-        if: steps.browser.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium firefox webkit
+      # Browsers already restored from the cache are skipped; the system packages are installed in any case.
+      - name: Install Chromium, Firefox and WebKit with their system packages
+        run: |
+          npx playwright install --with-deps chromium firefox webkit
+          sudo chown -R "$USER" ~/.cache/apt-archives
         working-directory: e2e
 
       - name: Cache the Next.js build cache
