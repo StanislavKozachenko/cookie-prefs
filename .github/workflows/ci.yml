@@ -61,10 +61,37 @@ jobs:
       - run: npm run typecheck
       - run: npm test
 
+  # The e2e jobs run in the Playwright image, which holds Chromium, Firefox and WebKit with their system libraries
+  # (no apt at run time). Its tag must be the installed Playwright version, read here from e2e's lockfile so a
+  # Dependabot bump of @playwright/test moves the image with it.
+  playwright:
+    name: Playwright version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: e2e/package-lock.json
+          sparse-checkout-cone-mode: false
+
+      - name: Read the @playwright/test version from e2e/package-lock.json
+        id: version
+        run: |
+          version=$(jq -er '.packages["node_modules/@playwright/test"].version' e2e/package-lock.json)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "mcr.microsoft.com/playwright:v$version-noble"
+
   e2e:
     name: E2E on Next ${{ matrix.next }}
+    needs: playwright
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
+    # The runner's user (1001) owns the workspace and $HOME, which Firefox requires; --ipc=host keeps Chromium from
+    # running out of shared memory. The image sets PLAYWRIGHT_BROWSERS_PATH=/ms-playwright.
+    container:
+      image: mcr.microsoft.com/playwright:v${{ needs.playwright.outputs.version }}-noble
+      options: --user 1001 --ipc=host
     strategy:
       fail-fast: false
       matrix:
@@ -83,34 +110,6 @@ jobs:
       - run: npm ci
       - run: npm ci --prefix e2e
       - run: npm run typecheck --prefix e2e
-
-      - name: Read the Playwright version and the runner image
-        id: playwright
-        run: |
-          echo "version=$(node -p "require('./e2e/node_modules/@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
-          echo "image=$ImageOS-$ImageVersion" >> "$GITHUB_OUTPUT"
-
-      # The three browsers need about 140 MB of system packages, and apt mirrors are sometimes slow: apt downloads
-      # them into a folder that is cached with the browsers, so a cache hit installs them without downloading.
-      - name: Keep the downloaded system packages in a cacheable folder
-        run: |
-          mkdir -p ~/.cache/apt-archives/partial
-          printf 'Dir::Cache::Archives "%s";\nAPT::Keep-Downloaded-Packages "true";\n' ~/.cache/apt-archives | sudo tee /etc/apt/apt.conf.d/99-cacheable-archives
-
-      - name: Cache the Playwright browsers and their system packages
-        uses: actions/cache@v6
-        with:
-          path: |
-            ~/.cache/ms-playwright
-            ~/.cache/apt-archives
-          key: playwright-${{ steps.playwright.outputs.image }}-${{ steps.playwright.outputs.version }}-chromium-firefox-webkit
-
-      # Browsers already restored from the cache are skipped; the system packages are installed in any case.
-      - name: Install Chromium, Firefox and WebKit with their system packages
-        run: |
-          npx playwright install --with-deps chromium firefox webkit
-          sudo chown -R "$USER" ~/.cache/apt-archives
-        working-directory: e2e
 
       - name: Cache the Next.js build cache
         uses: actions/cache@v6
@@ -141,8 +140,13 @@ jobs:
 
   e2e-react-router:
     name: E2E on React Router 7
+    needs: playwright
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
+    # The same image and options as the `e2e` job.
+    container:
+      image: mcr.microsoft.com/playwright:v${{ needs.playwright.outputs.version }}-noble
+      options: --user 1001 --ipc=host
     steps:
       - uses: actions/checkout@v7
 
@@ -158,32 +162,6 @@ jobs:
       - run: npm ci
       - run: npm ci --prefix e2e
       - run: npm run typecheck --prefix e2e
-
-      - name: Read the Playwright version and the runner image
-        id: playwright
-        run: |
-          echo "version=$(node -p "require('./e2e/node_modules/@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
-          echo "image=$ImageOS-$ImageVersion" >> "$GITHUB_OUTPUT"
-
-      # The same browser and system package cache as the `e2e` job (same key).
-      - name: Keep the downloaded system packages in a cacheable folder
-        run: |
-          mkdir -p ~/.cache/apt-archives/partial
-          printf 'Dir::Cache::Archives "%s";\nAPT::Keep-Downloaded-Packages "true";\n' ~/.cache/apt-archives | sudo tee /etc/apt/apt.conf.d/99-cacheable-archives
-
-      - name: Cache the Playwright browsers and their system packages
-        uses: actions/cache@v6
-        with:
-          path: |
-            ~/.cache/ms-playwright
-            ~/.cache/apt-archives
-          key: playwright-${{ steps.playwright.outputs.image }}-${{ steps.playwright.outputs.version }}-chromium-firefox-webkit
-
-      - name: Install Chromium, Firefox and WebKit with their system packages
-        run: |
-          npx playwright install --with-deps chromium firefox webkit
-          sudo chown -R "$USER" ~/.cache/apt-archives
-        working-directory: e2e
 
       - name: Build and pack the package
         run: node e2e/scripts/run.mjs react-router pack
@@ -252,12 +230,12 @@ jobs:
   ci-ok:
     name: CI ok
     runs-on: ubuntu-latest
-    needs: [test, audit, react-18, e2e, e2e-react-router, demo]
+    needs: [test, audit, react-18, playwright, e2e, e2e-react-router, demo]
     if: always()
     steps:
       - name: Fail unless every required job passed
         run: |
-          if [ "${{ needs.test.result }}" != "success" ] || [ "${{ needs.audit.result }}" != "success" ] || [ "${{ needs.react-18.result }}" != "success" ] || [ "${{ needs.e2e.result }}" != "success" ] || [ "${{ needs.e2e-react-router.result }}" != "success" ] || [ "${{ needs.demo.result }}" != "success" ]; then
-            echo "::error::test: ${{ needs.test.result }}, audit: ${{ needs.audit.result }}, react-18: ${{ needs.react-18.result }}, e2e: ${{ needs.e2e.result }}, e2e-react-router: ${{ needs.e2e-react-router.result }}, demo: ${{ needs.demo.result }}"
+          if [ "${{ needs.test.result }}" != "success" ] || [ "${{ needs.audit.result }}" != "success" ] || [ "${{ needs.react-18.result }}" != "success" ] || [ "${{ needs.playwright.result }}" != "success" ] || [ "${{ needs.e2e.result }}" != "success" ] || [ "${{ needs.e2e-react-router.result }}" != "success" ] || [ "${{ needs.demo.result }}" != "success" ]; then
+            echo "::error::test: ${{ needs.test.result }}, audit: ${{ needs.audit.result }}, react-18: ${{ needs.react-18.result }}, playwright: ${{ needs.playwright.result }}, e2e: ${{ needs.e2e.result }}, e2e-react-router: ${{ needs.e2e-react-router.result }}, demo: ${{ needs.demo.result }}"
             exit 1
           fi
