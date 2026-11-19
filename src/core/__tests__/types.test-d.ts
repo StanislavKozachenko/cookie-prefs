@@ -27,6 +27,8 @@ import * as core from '../../index';
 import { PrefsProvider, usePref, type PrefSetter } from '../../react/index';
 import { prefsScript } from '../../script/index';
 import { ThemeProvider, useTheme, type ThemeProviderProps, type UseThemeProps } from '../../theme/index';
+import { getTheme, type ThemeOptions as NextThemeOptions } from '../../theme/next/index';
+import { readTheme, type ThemeOptions } from '../../theme/server/index';
 
 const prefs = definePrefs({
   theme: pref.enum(['light', 'dark', 'system']).default('system').reflect('class'),
@@ -243,3 +245,29 @@ const themeProps: ThemeProviderProps = {
   scriptProps: { 'data-cfasync': 'false' },
 };
 expectTypeOf(themeProps).toExtend<ThemeProviderProps>();
+
+// Theme on the server: the stored name, `'system'` included; a literal `themes` tuple narrows it.
+expectTypeOf(readTheme('theme=dark')).toEqualTypeOf<string>();
+expectTypeOf(readTheme(null, { defaultTheme: 'dark' })).toEqualTypeOf<string>();
+expectTypeOf(readTheme('', { themes: ['light', 'dark'] })).toEqualTypeOf<'light' | 'dark' | 'system'>();
+const tuple = ['light', 'dark', 'sepia'] as const;
+expectTypeOf(readTheme('', { themes: tuple, defaultTheme: 'sepia' })).toEqualTypeOf<
+  'light' | 'dark' | 'sepia' | 'system'
+>();
+declare const names: string[];
+expectTypeOf(readTheme('', { themes: names })).toEqualTypeOf<string>();
+readTheme(new Map([['theme', { value: 'dark' }]]));
+readTheme({ theme: 'dark' }, { storageKey: 'theme', enableSystem: false, value: { dark: 'd' } });
+// with a literal list, the default and the `value` keys must be listed (or 'system')
+readTheme('', { themes: ['light', 'dark'], defaultTheme: 'system', value: { dark: 'd', system: 's' } });
+// @ts-expect-error not one of `themes`
+readTheme('', { themes: ['light', 'dark'], defaultTheme: 'sepia' });
+// @ts-expect-error a `value` key outside `themes` would widen the result
+readTheme('', { themes: ['light', 'dark'], value: { pink: 'p' } });
+// one config object for the provider and the server
+expectTypeOf(readTheme('', themeProps)).toEqualTypeOf<string>();
+expectTypeOf(getTheme(themeProps)).toEqualTypeOf<Promise<string>>();
+expectTypeOf(getTheme()).toEqualTypeOf<Promise<string>>();
+expectTypeOf(getTheme({ themes: ['light', 'dark'] })).toEqualTypeOf<Promise<'light' | 'dark' | 'system'>>();
+expectTypeOf<NextThemeOptions>().toEqualTypeOf<ThemeOptions>();
+expectTypeOf<ThemeOptions<'a'>['themes']>().toEqualTypeOf<readonly 'a'[] | undefined>();

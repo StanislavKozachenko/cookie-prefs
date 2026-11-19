@@ -15,7 +15,9 @@
     "paths": {
       "cookie-prefs": ["./src/index.ts"],
       "cookie-prefs/react": ["./src/react/index.tsx"],
-      "cookie-prefs/script": ["./src/script/index.ts"]
+      "cookie-prefs/script": ["./src/script/index.ts"],
+      "cookie-prefs/next": ["./src/next/index.tsx"],
+      "cookie-prefs/theme/server": ["./src/theme/server/index.ts"]
     }
   },
   "include": ["src", "*.config.ts"]

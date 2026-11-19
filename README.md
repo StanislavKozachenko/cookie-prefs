@@ -121,6 +121,8 @@ export async function setLocale(locale: string) {
 | `cookie-prefs/script` | `prefsScript`, the pre-paint script for `PrefsProvider` outside Next.js        | [Core](docs/core.md#cookie-prefsreact-outside-nextjs) |
 | `cookie-prefs/next`   | Server-only: `PrefsProvider`, `getPrefs` (App Router)                          | [Next.js](docs/nextjs.md) |
 | `cookie-prefs/theme`  | next-themes compatible `ThemeProvider` and `useTheme`                          | [Theme](docs/theme.md) |
+| `cookie-prefs/theme/next` | Server-only: `getTheme`, the stored theme in the App Router (opt-in)      | [Theme](docs/theme.md#reading-the-theme-on-the-server) |
+| `cookie-prefs/theme/server` | `readTheme`, the stored theme from request cookies on any server        | [Theme](docs/theme.md#reading-the-theme-on-the-server) |
 
 ## Renaming an enum value
 
@@ -146,6 +148,8 @@ density: pref.enum(['compact', 'comfortable']).default('comfortable').migrate({ 
 ```
 
 Props and hook fields keep their next-themes names and defaults; the choice lives in a cookie, and existing `localStorage` themes are moved once. Setup and the full list of differences are in the [Theme guide](docs/theme.md).
+
+To render from the stored theme on the server (`<html className>`), opt in with `await getTheme({ themes })` from `cookie-prefs/theme/next`, or `readTheme(cookieHeader, { themes })` from `cookie-prefs/theme/server` outside Next.js. It makes the route dynamic, returns `'system'` unresolved, and the inline script stays in charge before hydration; see [Reading the theme on the server](docs/theme.md#reading-the-theme-on-the-server).
 
 ## Security and platform notes
 

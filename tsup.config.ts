@@ -11,6 +11,8 @@ export default defineConfig({
     'next/index': 'src/next/index.tsx',
     'script/index': 'src/script/index.ts',
     'theme/index': 'src/theme/index.tsx',
+    'theme/server/index': 'src/theme/server/index.ts',
+    'theme/next/index': 'src/theme/next/index.ts',
   },
   format: ['esm', 'cjs'],
   dts: true,
