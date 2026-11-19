@@ -1,0 +1,145 @@
+name: Demo bump
+
+# Moves the demo (demo/, deployed from main) to a released cookie-prefs through a pull request,
+# after every successful Release run or by hand. It is a workflow of its own so that nothing here
+# can fail or undo a release: by the time it runs, the version is on npm and the bump is on main.
+on:
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'cookie-prefs version (empty: the version in package.json on main)'
+        required: false
+        type: string
+
+permissions: {}
+
+# One run at a time, so two runs for the same version never race for the branch or the PR.
+concurrency:
+  group: demo-bump
+  cancel-in-progress: false
+
+jobs:
+  bump:
+    name: Bump cookie-prefs in the demo
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # GITHUB_TOKEN only reads the checkout. Branch, commit and PR use RELEASE_TOKEN: events
+    # caused by GITHUB_TOKEN start no workflows, and the PR needs CI.
+    permissions:
+      contents: read
+    steps:
+      # main, not the commit the Release run started from: the version bump is on main.
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      # The default is what the release just committed to main, so a re-run or a run by hand
+      # targets the released version even if the npm `latest` tag says otherwise.
+      - name: Resolve the version
+        id: version
+        env:
+          INPUT: ${{ inputs.version }}
+        run: |
+          version="${INPUT:-$(node -p "require('./package.json').version")}"
+          version="${version#v}"
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::Not a version: $version"
+            exit 1
+          fi
+          echo "value=$version" >> "$GITHUB_OUTPUT"
+          echo "cookie-prefs $version"
+
+      - name: Wait until the version is installable from npm
+        run: node .github/scripts/demo-bump.mjs wait "$VERSION"
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+
+      - name: Update demo/package.json and demo/package-lock.json
+        id: update
+        run: node .github/scripts/demo-bump.mjs update "$VERSION"
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+
+      # Re-runs are safe: an existing branch is reused (and committed to only if its files
+      # differ), an open PR is reused, auto-merge is enabled once.
+      - name: Commit to a branch and open the pull request
+        if: steps.update.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          VERSION: ${{ steps.version.outputs.value }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          branch="chore/demo-cookie-prefs-${VERSION}"
+          title="chore(demo): bump cookie-prefs to ${VERSION}"
+          files=(demo/package.json demo/package-lock.json)
+
+          if head=$(gh api "repos/${REPO}/git/ref/heads/${branch}" --jq .object.sha 2>/dev/null); then
+            echo "Branch ${branch} exists at ${head}"
+            commit=false
+            for file in "${files[@]}"; do
+              gh api -H 'Accept: application/vnd.github.raw' "repos/${REPO}/contents/${file}?ref=${branch}" > "$RUNNER_TEMP/branch-file"
+              cmp -s "$RUNNER_TEMP/branch-file" "$file" || commit=true
+            done
+          else
+            head=$(git rev-parse HEAD)
+            gh api "repos/${REPO}/git/refs" -f ref="refs/heads/${branch}" -f sha="$head" --silent
+            echo "Created ${branch} at ${head}"
+            commit=true
+          fi
+
+          # Through the API, like the release bump, so GitHub signs the commit (Verified).
+          if [ "$commit" = true ]; then
+            BRANCH="$branch" HEAD_OID="$head" TITLE="$title" OUT="$RUNNER_TEMP/commit.json" node -e '
+              const { readFileSync, writeFileSync } = require("fs")
+              const { REPO, BRANCH, HEAD_OID, TITLE, OUT } = process.env
+              const files = ["demo/package.json", "demo/package-lock.json"]
+              const query = `mutation($input: CreateCommitOnBranchInput!) { createCommitOnBranch(input: $input) { commit { oid } } }`
+              const input = {
+                branch: { repositoryNameWithOwner: REPO, branchName: BRANCH },
+                message: { headline: TITLE },
+                expectedHeadOid: HEAD_OID,
+                fileChanges: { additions: files.map(path => ({ path, contents: readFileSync(path).toString("base64") })) },
+              }
+              writeFileSync(OUT, JSON.stringify({ query, variables: { input } }))
+            '
+            oid=$(gh api graphql --input "$RUNNER_TEMP/commit.json" --jq '.data.createCommitOnBranch.commit.oid')
+            echo "Committed ${oid} to ${branch}"
+          else
+            echo "${branch} already has these files, no commit"
+          fi
+
+          url=$(gh pr list --repo "$REPO" --head "$branch" --state open --json url --jq '.[0].url // empty')
+          if [ -n "$url" ]; then
+            echo "Pull request already open: ${url}"
+          else
+            url=$(gh pr create --repo "$REPO" --base main --head "$branch" \
+              --title "$title" \
+              --label chore --label dependencies \
+              --assignee StanislavKozachenko \
+              --body "Brings the demo to cookie-prefs ${VERSION}. Opened by the [Demo bump workflow](${RUN_URL}).
+
+          - Only \`cookie-prefs\` changes in \`demo/package.json\` and \`demo/package-lock.json\`
+          - The \`Demo app\` CI job type-checks and builds the demo against ${VERSION}; auto-merge (squash) merges this when \`CI ok\` is green
+          - If that job fails, the release changed something the demo uses: fix the demo on this branch")
+            echo "Opened ${url}"
+          fi
+
+          # The GraphQL mutation, not `gh pr merge --auto`, which merges at once when it can:
+          # auto-merge waits for the required checks.
+          read -r id auto < <(gh pr view "$url" --repo "$REPO" --json id,autoMergeRequest --jq '"\(.id) \(.autoMergeRequest != null)"')
+          if [ "$auto" = true ]; then
+            echo "Auto-merge already enabled"
+          else
+            gh api graphql -f id="$id" -f query='mutation($id: ID!) { enablePullRequestAutoMerge(input: { pullRequestId: $id, mergeMethod: SQUASH }) { clientMutationId } }' --silent
+            echo "Auto-merge (squash) enabled, waiting for CI ok"
+          fi
