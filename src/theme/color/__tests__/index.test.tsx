@@ -233,10 +233,12 @@ describe('client', () => {
   it('hydrates without warnings and keeps the tag the script added', () => {
     appMetas();
     document.cookie = 'theme=dark';
-    const errors = vi.spyOn(console, 'error');
+    // Server rendering is checked in `server.test.tsx`: here the modules were loaded with a
+    // DOM, so React 18's server renderer would warn about the layout effects.
     const container = serverPage(<App color={{ colors: COLORS, nonce: 'n' }} />);
     const tag = document.querySelector('meta[property="cookie-prefs"]');
     expect(metas()).toEqual([{ content: '#0a0a0a', media: null, ours: true }, ...APP]);
+    const errors = vi.spyOn(console, 'error');
     let root!: ReturnType<typeof hydrateRoot>;
     act(() => {
       root = hydrateRoot(container, <App color={{ colors: COLORS, nonce: 'n' }} />);
