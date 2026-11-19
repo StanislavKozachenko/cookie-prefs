@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from 'react';
 import type { Pref, PrefSetter, PrefsRecord, PrefsSnapshot, PrefTypes, PrefValues } from '../core/types';
-import { rawCookie, reapply } from './reapply';
+import { reapply } from './reapply';
 
 export type { PrefSetter } from '../core/types';
 
@@ -69,7 +69,8 @@ export function usePref<T, V>(pref: Pref<T, V>): [value: V, setValue: PrefSetter
       if (
         current !== undefined &&
         pref.toCookie(current).maxAge > 604800 &&
-        rawCookie(pref.name) === encodeURIComponent(pref.toCookie(current).value)
+        ('; ' + document.cookie).split('; ' + pref.name + '=')[1]?.split(';')[0] ===
+          encodeURIComponent(pref.toCookie(current).value)
       )
         pref.set(() => current);
     } catch {
