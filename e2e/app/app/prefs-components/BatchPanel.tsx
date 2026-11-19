@@ -1,6 +1,6 @@
 'use client';
 
-import { usePrefs } from 'cookie-prefs/react/batch';
+import { usePrefs } from 'cookie-prefs/react';
 import { prefs } from '../prefs';
 import { fmt } from '../lib/fmt';
 

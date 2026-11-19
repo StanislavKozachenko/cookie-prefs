@@ -48,16 +48,6 @@
         "default": "./dist/react/index.cjs"
       }
     },
-    "./react/batch": {
-      "import": {
-        "types": "./dist/react/batch/index.d.ts",
-        "default": "./dist/react/batch/index.js"
-      },
-      "require": {
-        "types": "./dist/react/batch/index.d.cts",
-        "default": "./dist/react/batch/index.cjs"
-      }
-    },
     "./next": {
       "import": {
         "types": "./dist/next/index.d.ts",
@@ -125,9 +115,6 @@
       "react": [
         "./dist/react/index.d.ts"
       ],
-      "react/batch": [
-        "./dist/react/batch/index.d.ts"
-      ],
       "next": [
         "./dist/next/index.d.ts"
       ],
@@ -171,16 +158,7 @@
     {
       "name": "cookie-prefs/react",
       "path": "dist/react/index.js",
-      "limit": "980 B",
-      "gzip": true,
-      "ignore": [
-        "cookie-prefs"
-      ]
-    },
-    {
-      "name": "cookie-prefs/react/batch",
-      "path": "dist/react/batch/index.js",
-      "limit": "200 B",
+      "limit": "1040 B",
       "gzip": true,
       "ignore": [
         "cookie-prefs"
