@@ -122,6 +122,14 @@ export async function setLocale(locale: string) {
 | `cookie-prefs/next`   | Server-only: `PrefsProvider`, `getPrefs` (App Router)                          | [Next.js](docs/nextjs.md) |
 | `cookie-prefs/theme`  | next-themes compatible `ThemeProvider` and `useTheme`                          | [Theme](docs/theme.md) |
 
+## Renaming an enum value
+
+Users keep their choice when an enum value is renamed: a cookie holding an old name reads as its new value on the server, on the client and in the pre-paint script, and the next `set()` writes the new name.
+
+```ts
+density: pref.enum(['compact', 'comfortable']).default('comfortable').migrate({ cozy: 'comfortable' }),
+```
+
 ## Next.js modes
 
 `PrefsProvider` runs in `script` mode by default (the route stays static, hooks render defaults until hydration) or `mode="server"` (the route becomes dynamic, hooks render the exact cookie values). Cache Components, `router.refresh()` and nonce are covered in the [Next.js guide](docs/nextjs.md).

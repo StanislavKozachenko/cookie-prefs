@@ -16,7 +16,7 @@ Constraints to know before shipping, and what cookie-prefs deliberately does not
 
 - A server-side theme helper (`getTheme`) and server rendering of the theme preset; `theme-color` management and a forced theme per page without a provider.
 - Automatic `router.refresh()` after writes, and optimistic server sync.
-- Async validators, value migrations or versioning, encryption or signing.
+- Async validators, versioning of stored values (renamed enum values are covered by [`.migrate()`](core.md#renamed-enum-values)), encryption or signing.
 - `localStorage`, `sessionStorage` or a combined-cookie backend, and URL state (use nuqs).
 - Reflection targets other than `<html>`, and system-preference resolution for prefs other than the theme.
 - Batch hooks, selectors, devtools and middleware helpers.
