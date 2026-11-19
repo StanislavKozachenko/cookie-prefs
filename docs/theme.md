@@ -85,6 +85,37 @@ const theme = readTheme(request.headers.get('cookie'), { themes: ['light', 'dark
 - `getTheme()` reads the request like `getPrefs` (the `Cookie` header as the browser sends it, plus a theme cookie written earlier in the same request by a Server Function or middleware). It is async and works on Next.js 14, 15 and 16. Server Components are not refreshed by `setTheme()`: call `router.refresh()` when server output depends on the theme.
 - Right after a move from next-themes, the first request has no cookie yet (the value is still in `localStorage`), so the server sees the default until the client has moved it.
 
+## Browser UI colour (`theme-color`)
+
+`<meta name="theme-color">` colours the browser UI where the browser uses it (Safari, Chrome on Android, the title bar of installed apps). `ThemeColor` keeps it in sync with the theme. Opt-in, in an entry of its own, so `cookie-prefs/theme` and apps that do not import it are unchanged.
+
+```tsx
+// app/layout.tsx
+import { ThemeProvider } from 'cookie-prefs/theme'
+import { ThemeColor } from 'cookie-prefs/theme/color'
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <body>
+        <ThemeProvider attribute="class">
+          <ThemeColor colors={{ light: '#ffffff', dark: '#0a0a0a' }} />
+          {children}
+        </ThemeProvider>
+      </body>
+    </html>
+  )
+}
+```
+
+- `colors` maps a theme name to any CSS colour, keyed like `themes`: custom themes and `value` keys too (by name, not by DOM value). The colour is the one of the theme shown: `forcedTheme` first, `system` resolved from the OS scheme and following its changes, the stored choice otherwise. It follows `setTheme()` and other tabs.
+- Render it once, inside `ThemeProvider`, anywhere among its children. It renders a small inline script and nothing visible; pass it the same `nonce` as the provider under a strict CSP.
+- No flash on a hard load: the inline script runs before paint, reads the provider script's settings from the page and resolves the theme exactly as the provider's script does (cookie, then a next-themes value in `localStorage`, `defaultTheme`, `forcedTheme`, `system`), so no provider prop has to be repeated. After hydration it follows `useTheme()`. No request API is read: routes stay static and Cache Components work.
+- It owns one tag, `<meta name="theme-color" property="cookie-prefs">`, without `media`, and keeps it before every other theme-color tag, so the browser uses it. Tags the page renders itself (Next.js `viewport.themeColor`, with or without `media`) are left in place and untouched: they apply to a theme without a colour (the owned tag is removed then) and when JavaScript is off. Keeping `viewport.themeColor` as that fallback or dropping it are both fine; the owned tag stays first across client navigations that replace the page's tags.
+- Colours are used as written: `var(--x)` is not resolved.
+- next-themes 1.0 beta has a `themeColor` prop instead; its map moves to `colors`. It is applied before hydration here, and it does not rewrite the page's own tags.
+- React 18 apps that hydrate the whole document outside the Next.js App Router (React renders `<head>`): do not also render a theme-color `<meta>` there with React. The owned tag goes before it, and React 18 hydrates `<head>` children by position. Without such a tag the owned tag is appended to `<head>`, which React 18 tolerates. React 19, and every Next.js App Router version, is unaffected.
+
 ## Differences from next-themes
 
 - The choice is stored in a cookie, not in `localStorage`.
@@ -96,6 +127,7 @@ const theme = readTheme(request.headers.get('cookie'), { themes: ['light', 'dark
 - Only `class` and `data-*` attributes are supported (enforced by the types).
 - Other tabs are followed through the core (CookieStore, or BroadcastChannel) instead of the `storage` event.
 - The inline script is fixed source rather than a stringified function, and renders without the React 19 script warning.
-- The stored theme can be read on the server with `getTheme()` / `readTheme()` (see above); next-themes has no server helper. No `theme-color` meta management (see [non-goals](security.md#non-goals)).
+- The stored theme can be read on the server with `getTheme()` / `readTheme()` (see above); next-themes has no server helper.
+- `theme-color` is managed by the opt-in `ThemeColor` (see above), not by a provider prop.
 
 See also [security and platform notes](security.md) for the nonce, Trusted Types and the Safari cap.
