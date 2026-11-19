@@ -59,15 +59,16 @@ res.cookie(name, value, { ...options, maxAge: maxAge * 1000 })
 Outside Next.js (Vite, Remix, TanStack Start), wrap the app once so the server render sees the request's cookies and the pre-paint script is emitted:
 
 ```tsx
-import { prefsScript, snapshotPrefs } from 'cookie-prefs'
+import { snapshotPrefs } from 'cookie-prefs'
 import { PrefsProvider } from 'cookie-prefs/react'
+import { prefsScript } from 'cookie-prefs/script'
 
 <PrefsProvider snapshot={snapshotPrefs(prefs, cookieHeader)} script={prefsScript(prefs)} nonce={nonce}>
   <App />
 </PrefsProvider>
 ```
 
-`snapshot` holds only the raw cookies of your prefs and is serializable. Omit it for a static page: hooks then render defaults until hydration ends. Place the provider at the top of `<body>`.
+`prefsScript(prefs)` from `cookie-prefs/script` returns the source of the pre-paint script that applies every `.reflect()` declaration (`''` when no pref reflects); it has its own entry so apps that do not render it do not ship it. `snapshot` holds only the raw cookies of your prefs and is serializable. Omit it for a static page: hooks then render defaults until hydration ends. Place the provider at the top of `<body>`.
 
 The client must hydrate with the same snapshot the server rendered with: pass it down (loader data, serialized props, an inline JSON script) and give it to the client `PrefsProvider`. During SSR and hydration `usePref` returns the value from the nearest provider's `snapshot`, or the default when there is none. Without the snapshot on the client, hooks render defaults while the server HTML holds the cookie values, and React reports a hydration mismatch. The pre-paint script changes `<html>` attributes before hydration, so put `suppressHydrationWarning` on `<html>` (in the Pages Router, in `_document`).
 

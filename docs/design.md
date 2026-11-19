@@ -1,9 +1,9 @@
 # cookie-prefs design
 
 Contract for the implementation. The public types in `src/index.ts`, `src/core/types.ts`,
-`src/react/index.tsx`, `src/next/index.tsx` and `src/theme/index.tsx` are final;
-`src/core/__tests__/types.test-d.ts` pins their inference and is checked by `npm run typecheck`.
-Change the API only together with this document.
+`src/react/index.tsx`, `src/script/index.ts`, `src/next/index.tsx` and `src/theme/index.tsx`
+are final; `src/core/__tests__/types.test-d.ts` pins their inference and is checked by
+`npm run typecheck`. Change the API only together with this document.
 
 > nuqs keeps state in the URL; cookie-prefs keeps it in cookies, so the server knows it before the first render.
 
@@ -51,6 +51,16 @@ const [sidebar, setSidebar] = usePref(prefs.sidebar)
 </PrefsProvider>
 ```
 
+### `cookie-prefs/script`
+
+```ts
+import { prefsScript } from 'cookie-prefs/script'
+
+prefsScript(prefs) // source of the pre-paint script, '' when no pref reflects
+```
+
+Its own entry, so the inline script source is not part of the core bundle. It has no runtime imports: it reads the reflection config from the handles (see Duplicate copies), so it works with handles from any copy of the core.
+
 ### `cookie-prefs/next` (App Router, server-only entry)
 
 ```tsx
@@ -90,7 +100,7 @@ const { theme, resolvedTheme, setTheme } = useTheme()
 2. **Cookie defaults**: `Path=/`, `SameSite=Lax`, `Max-Age` 400 days (the RFC 6265bis cap; every write refreshes it), no `Domain`, `Secure` added automatically on `https:` pages for browser writes and omitted by `toCookie()` unless set. Override for all prefs in `definePrefs(shape, options)` or per pref with `.options()`; an option set to `undefined` (`prefix` and `name` included; also `null`, which only JavaScript callers can pass) is ignored, so the value falls through to an earlier `.options()` call, then the `definePrefs()` options, then the default. Prefs are never `HttpOnly` because the browser writes them, so they are readable by any script: never store secrets or session data in a pref.
 3. **Builder, then handle**. `pref.*` returns an immutable builder carrying a type-only `'~types'` marker (`PrefTypes<T, V>`); `definePrefs` turns each into a `Pref<T, V>` handle (codec + cookie name + store). `T` is the writable type, `V` is `T` with a default or `T | undefined` without. The handle is what `usePref` takes and works outside React. The setter takes `T | ((prev: V) => T)`; clearing is `reset()`, never `set(undefined)`.
 4. **Server snapshot**: the provider carries `PrefsSnapshot`, the raw cookie strings of only these prefs (serializable across the RSC boundary, never other request cookies). `usePref` uses `useSyncExternalStore` with `getServerSnapshot = parse(snapshot[name])`, or the default when there is no snapshot (script mode), so SSR and hydration render the same value; afterwards it reads `document.cookie`. Values only the client can resolve (`'system'`) are never stored resolved: the cookie holds the choice, the resolved value is client-derived state that is `undefined` during SSR and hydration (`resolvedTheme`, `systemTheme`), and the DOM gets it from the inline script before paint.
-5. **Script mode**: enum, boolean, number and string prefs declare `.reflect(target, valueMap?)`, where target is `'class'` (enums only), `data-*` or a `--css-var`, on `<html>`. `prefsScript(prefs)` returns fixed hand-written code plus a JSON config with `<` escaped (no `Function.prototype.toString`, which broke next-themes in #370). React renders it as `<script>` with `type="text/javascript"` on the server and `type="text/plain"` on the client plus `suppressHydrationWarning`, the fix from the Next.js docs: React does not warn for data-block scripts. `nonce` is a prop. The script also runs in server mode, because `<html>` attributes cannot depend on `cookies()` under Cache Components.
+5. **Script mode**: enum, boolean, number and string prefs declare `.reflect(target, valueMap?)`, where target is `'class'` (enums only), `data-*` or a `--css-var`, on `<html>`. `prefsScript(prefs)` (`cookie-prefs/script`) returns fixed hand-written code plus a JSON config with `<` escaped (no `Function.prototype.toString`, which broke next-themes in #370). React renders it as `<script>` with `type="text/javascript"` on the server and `type="text/plain"` on the client plus `suppressHydrationWarning`, the fix from the Next.js docs: React does not warn for data-block scripts. `nonce` is a prop. The script also runs in server mode, because `<html>` attributes cannot depend on `cookies()` under Cache Components.
 6. **Client writes** go straight to `document.cookie` (synchronous, works on plain-HTTP localhost, `get()` after `set()` is consistent); local subscribers are notified synchronously; other tabs learn via the CookieStore `change` event where available, else a `BroadcastChannel` message posted after each write. No Server Action round trip. Server Components that read prefs via `getPrefs` are not refreshed: when server output depends on a pref, the app calls `router.refresh()` after `set` (documented pattern, not automatic, so a sidebar toggle never refetches the page).
 7. **Not in v1**: see "Non-goals".
 
@@ -126,9 +136,9 @@ Other decisions:
 ## Implementation notes
 
 - **Entry boundaries.** `cookie-prefs/react` and `cookie-prefs/theme` are client modules: their built files start with `'use client'`, prepended to the ESM and CJS output in tsup `onSuccess` (tree shaking strips a `banner` directive, and one config avoids `clean` races between parallel builds). `cookie-prefs/next` is server-only: no `'use client'`, it imports `next/headers.js` (with the extension: `next` has no `exports` map, so Node ESM, e.g. vitest in an app where cookie-prefs is not bundled, cannot resolve `next/headers`; the file exists in Next 14 to 16). Server helpers must never live in a client entry, because a Server Component calling them gets a client reference.
-- **No duplicated state.** Runtime imports between entries use package specifiers (`'cookie-prefs'`, `'cookie-prefs/react'`) marked external in tsup, not relative paths, so the cross-tab listener and stores exist once and the client boundary survives bundling. Type-only imports from `../core/types` are fine.
-- **Duplicate copies.** Handles are portable across copies of the core (ESM + CJS, two versions): what `prefsScript` needs lives on the handle under a `Symbol.for` key, not in module state; two copies of `cookie-prefs/react` still mean two React contexts, which is inherent to React.
-- **Next `PrefsProvider`** is an async Server Component: in `'server'` mode it passes the request snapshot that `getPrefs` reads too; in both modes it passes `prefsScript(prefs)` and `nonce` to the client `PrefsProvider` from `'cookie-prefs/react'`. `prefs` itself never crosses to the client.
+- **No duplicated state.** Runtime imports between entries use package specifiers (`'cookie-prefs'`, `'cookie-prefs/react'`, `'cookie-prefs/script'`) marked external in tsup, not relative paths, so the cross-tab listener and stores exist once and the client boundary survives bundling. Type-only imports from `../core/types` are fine.
+- **Duplicate copies.** Handles are portable across copies of the core (ESM + CJS, two versions): what `prefsScript` (`cookie-prefs/script`) needs lives on the handle under a `Symbol.for` key, not in module state, and the script entry repeats the key instead of importing the core; two copies of `cookie-prefs/react` still mean two React contexts, which is inherent to React.
+- **Next `PrefsProvider`** is an async Server Component: in `'server'` mode it passes the request snapshot that `getPrefs` reads too; in both modes it passes `prefsScript(prefs)` (from `'cookie-prefs/script'`) and `nonce` to the client `PrefsProvider` from `'cookie-prefs/react'`. `prefs` itself never crosses to the client.
 - **Next request snapshot.** `snapshotPrefs(prefs, header)` over the raw `Cookie` header from `headers()`, so the server parses like the browser and the inline script. Per pref, a `cookies()` value that equals none of the header's values for that name, decoded as Next decodes them (URI-decoded, quotes kept, a bare name is `'true'`, malformed values skipped), was written earlier in this request and replaces it; `''` (left by `delete()`) removes it, so a same-request `set('')` of a string pref also reads as missing until the next request. A write equal to a later duplicate in the header is not detected.
 - **Snapshots must be stable** for `useSyncExternalStore`: cache the parsed value per pref by raw string, so `json` and `custom` prefs do not return a new object on every read. Only where a DOM exists: on the server every read parses again, because a cached object would be handed to every later request, and one that mutates it would leak into the next (`typeof document` decides; the hydration read of a snapshot runs in the browser, so it stays cached and stable). Returned values, and the `.default()` value on both sides, are shared: the documented contract is to treat them as read-only.
 - **Own-write echo.** The CookieStore `change` event also fires for this tab's writes; compare raw values before notifying.
@@ -152,9 +162,9 @@ Other decisions:
 - **Nested providers** merge their snapshots (inner keys win); a provider without a snapshot keeps the outer one.
 - **Script mode trade-off.** Hooks render defaults until hydration ends; anything visible before hydration must come from reflected attributes plus CSS. Document this next to `mode`.
 - **`get()` on the server** returns the default; add a dev-only warning pointing to `read()` / `getPrefs()`.
-- **Size budget.** All of core (parsers, cookie codec, store, sync, Standard Schema glue, reflection, `prefsScript` source) must fit 2 KB gzip. If it cannot, discuss moving `prefsScript` before touching the limit.
-- **Tooling.** `tsconfig.json` uses `"jsx": "react-jsx"`; its `paths` and the vitest `resolve.alias` map `cookie-prefs` and `cookie-prefs/react` to `src/`, so typecheck and tests run from source while tsup keeps them external.
-- **Sizes.** `size-limit` checks `cookie-prefs/react`, `cookie-prefs/next` and `cookie-prefs/theme` too, with peers and core excluded.
+- **Size budget.** All of core (parsers, cookie codec, store, sync, Standard Schema glue, client reflection) must fit 2 KB gzip. `prefsScript` and the inline script source live in `cookie-prefs/script` with their own budget, so the core does not carry them; discuss moving more out of the core before touching the limit.
+- **Tooling.** `tsconfig.json` uses `"jsx": "react-jsx"`; its `paths` and the vitest `resolve.alias` map `cookie-prefs`, `cookie-prefs/react` and `cookie-prefs/script` to `src/`, so typecheck and tests run from source while tsup keeps them external.
+- **Sizes.** `size-limit` checks `cookie-prefs/react`, `cookie-prefs/script`, `cookie-prefs/next` and `cookie-prefs/theme` too, with peers and the other entries excluded (`ignore: ['cookie-prefs']` covers its subpaths).
 
 ### Theme preset (`cookie-prefs/theme`)
 
