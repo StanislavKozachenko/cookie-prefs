@@ -87,6 +87,13 @@ export function SidebarToggle() {
 }
 ```
 
+Several at once with `usePrefs`, which takes a partial patch:
+
+```tsx
+const [{ theme, sidebar }, set] = usePrefs(prefs)
+set({ sidebar: false, theme: 'dark' })
+```
+
 Read it in a Server Component (this makes the route dynamic):
 
 ```tsx
@@ -117,7 +124,7 @@ export async function setLocale(locale: string) {
 | Import                | What it is                                                                     | Guide |
 | --------------------- | ------------------------------------------------------------------------------ | ----- |
 | `cookie-prefs`        | Core, no DOM required: `definePrefs`, `pref.*`, `readPrefs`, `snapshotPrefs`   | [Core](docs/core.md) |
-| `cookie-prefs/react`  | `usePref`, and `PrefsProvider` for SSR outside Next.js                         | [Core](docs/core.md#cookie-prefsreact-outside-nextjs) |
+| `cookie-prefs/react`  | `usePref`, `usePrefs`, and `PrefsProvider` for SSR outside Next.js             | [Core](docs/core.md#cookie-prefsreact-outside-nextjs) |
 | `cookie-prefs/script` | `prefsScript`, the pre-paint script for `PrefsProvider` outside Next.js        | [Core](docs/core.md#cookie-prefsreact-outside-nextjs) |
 | `cookie-prefs/next`   | Server-only: `PrefsProvider`, `getPrefs` (App Router)                          | [Next.js](docs/nextjs.md) |
 | `cookie-prefs/theme`  | next-themes compatible `ThemeProvider` and `useTheme`                          | [Theme](docs/theme.md) |

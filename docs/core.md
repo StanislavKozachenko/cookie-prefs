@@ -74,6 +74,15 @@ A cookie holding `cozy` then reads as `'comfortable'` everywhere: `get()`, `read
 
 `usePref(pref)` returns `[value, setValue]`. Every component using the same pref stays in sync, also across tabs.
 
+`usePrefs(prefs)` reads several at once: pass the record from `definePrefs` or any record of its handles.
+
+```tsx
+const [{ theme, sidebar }, set] = usePrefs(prefs)
+set({ sidebar: (open) => !open, theme: 'dark' }) // partial patch, one re-render
+```
+
+It calls `usePref` for every handle, so SSR, hydration, cross-tab sync and the Safari refresh work exactly the same. `values` is typed like `readPrefs` and stays the same object until one of its prefs changes, so it is safe in dependency arrays. The setter passes each entry of the patch to that pref's `set()`: a value or an updater of the previous value, in the patch's order. Keys left out, and entries set to `undefined`, are not touched; clear a pref with `reset()`. The setter is the same function on every render while the record holds the same handles, even when the record is a new object literal each time. Like any hook, it needs the same keys on every render.
+
 Outside Next.js (Vite, Remix, TanStack Start), wrap the app once so the server render sees the request's cookies and the pre-paint script is emitted:
 
 ```tsx
@@ -88,7 +97,7 @@ import { prefsScript } from 'cookie-prefs/script'
 
 `prefsScript(prefs)` from `cookie-prefs/script` returns the source of the pre-paint script that applies every `.reflect()` declaration (`''` when no pref reflects); it has its own entry so apps that do not render it do not ship it. `snapshot` holds only the raw cookies of your prefs and is serializable. Omit it for a static page: hooks then render defaults until hydration ends. Place the provider at the top of `<body>`.
 
-The client must hydrate with the same snapshot the server rendered with: pass it down (loader data, serialized props, an inline JSON script) and give it to the client `PrefsProvider`. During SSR and hydration `usePref` returns the value from the nearest provider's `snapshot`, or the default when there is none. Without the snapshot on the client, hooks render defaults while the server HTML holds the cookie values, and React reports a hydration mismatch. The pre-paint script changes `<html>` attributes before hydration, so put `suppressHydrationWarning` on `<html>` (in the Pages Router, in `_document`).
+The client must hydrate with the same snapshot the server rendered with: pass it down (loader data, serialized props, an inline JSON script) and give it to the client `PrefsProvider`. During SSR and hydration `usePref` (and so `usePrefs`) returns the value from the nearest provider's `snapshot`, or the default when there is none. Without the snapshot on the client, hooks render defaults while the server HTML holds the cookie values, and React reports a hydration mismatch. The pre-paint script changes `<html>` attributes before hydration, so put `suppressHydrationWarning` on `<html>` (in the Pages Router, in `_document`).
 
 In React Router 7 (framework mode, SSR), compute the snapshot in the root loader and render the provider in the root `Layout`, which renders `<html>` and `<body>`. `Layout` also renders the error boundary, so it reads the loader data with `useRouteLoaderData('root')`, which is `undefined` when the loader threw: the provider then renders defaults.
 
