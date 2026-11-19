@@ -88,22 +88,22 @@ jobs:
         id: playwright
         run: echo "version=$(node -p "require('./e2e/node_modules/@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
 
-      - name: Cache the Playwright browser
+      - name: Cache the Playwright browsers
         id: browser
         uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium-firefox-webkit
 
-      # A cache hit restores the browser only: the system libraries still have to be installed.
-      - name: Install Chromium
+      # A cache hit restores the browsers only: the system libraries still have to be installed.
+      - name: Install Chromium, Firefox and WebKit
         if: steps.browser.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium firefox webkit
         working-directory: e2e
 
-      - name: Install the system libraries for Chromium
+      - name: Install the system libraries for Chromium, Firefox and WebKit
         if: steps.browser.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium
+        run: npx playwright install-deps chromium firefox webkit
         working-directory: e2e
 
       - name: Cache the Next.js build cache
@@ -119,6 +119,7 @@ jobs:
       - name: Install and build the Next.js ${{ matrix.next }} app
         run: node e2e/scripts/run.mjs ${{ matrix.next }} app
 
+      # One app build and one `next start`, tested in Chromium, Firefox and WebKit.
       - name: Run the Playwright suite
         run: node e2e/scripts/run.mjs ${{ matrix.next }} test
 
