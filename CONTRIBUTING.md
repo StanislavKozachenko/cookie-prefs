@@ -10,15 +10,18 @@ Development needs Node.js 22 or newer (`.nvmrc` pins 22, so `nvm use` picks it);
 
 ## End-to-end tests
 
-`e2e/` holds a Next.js App Router app and a Playwright suite (Chromium, production build) that run against the package packed from your checkout. Run one Next major at a time:
+`e2e/` holds a Next.js App Router app and a Playwright suite (Chromium, Firefox and WebKit, production build) that run against the package packed from your checkout. Run one Next major at a time:
 
 ```bash
 npm run e2e -- 16        # 14, 15 or 16: build and pack the package, install and build the app, run the tests
 npm run e2e -- 15 test   # only the tests, against the app built last time (steps: pack, app, test)
 npm run e2e -- 16 test -- -g theme   # arguments after the second `--` go to Playwright
+npm run e2e -- 16 test -- --project firefox   # one browser: chromium, firefox or webkit
 ```
 
-The first run installs `e2e/`'s dependencies; if Chromium is missing, run `cd e2e && npx playwright install chromium`. The app is generated into `e2e/.apps/next<major>` (gitignored) from `e2e/app/`, with the versions pinned in `e2e/versions.json`; the specs are in `e2e/tests/`. CI runs the three majors in parallel as the `e2e` job; on failure it uploads the Playwright report and traces.
+The first run installs `e2e/`'s dependencies, and the `test` step installs the browsers it runs (all three, or those picked with `--project`). The browsers' system libraries need root and are not installed by the script: if a browser fails to launch for a missing library, run `cd e2e && sudo npx playwright install-deps chromium firefox webkit`. The app is generated into `e2e/.apps/next<major>` (gitignored) from `e2e/app/`, with the versions pinned in `e2e/versions.json`; the specs are in `e2e/tests/`. The app is built once per run and every browser tests the same `next start`. CI runs the three majors in parallel as the `e2e` job, each with all three browsers; on failure it uploads the Playwright report and traces.
+
+Playwright's WebKit is not Safari: it does not reproduce Safari's tracking prevention, so the 7-day cap on script-written cookies (see [docs/security.md](docs/security.md)) is not covered by the suite.
 
 ## Submitting changes
 

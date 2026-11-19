@@ -17,7 +17,13 @@ export default defineConfig({
   forbidOnly: ci,
   reporter: ci ? [['github'], ['html', { open: 'never', outputFolder: 'report' }]] : [['dot']],
   outputDir: 'results',
-  use: { ...devices['Desktop Chrome'], baseURL: `http://localhost:${port}`, trace: 'retain-on-failure' },
+  use: { baseURL: `http://localhost:${port}`, trace: 'retain-on-failure' },
+  // One `next start` serves every project: the app is built once per Next major, whatever the browser.
+  projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
+    { name: 'webkit', use: { ...devices['Desktop Safari'] } },
+  ],
   webServer: {
     command: `npx next start -p ${port}`,
     cwd: path.resolve(__dirname, '.apps', `next${major}`),

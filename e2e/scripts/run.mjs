@@ -5,7 +5,7 @@
 // With no step names all three run in order:
 //   pack  build the package at this commit and `npm pack` it to e2e/.tmp/cookie-prefs.tgz
 //   app   materialise e2e/.apps/next<major> from e2e/app, install it (the tarball included) and `next build`
-//   test  `playwright test` against `next start` of that app
+//   test  install the browsers, then `playwright test` (Chromium, Firefox and WebKit) against `next start` of that app
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -82,6 +82,13 @@ if (todo.includes('app')) {
 }
 
 if (todo.includes('test')) {
-  // Chromium only. If it is missing: `cd e2e && npx playwright install chromium`.
+  // One Playwright project per browser. Only the browsers of the projects picked with `--project <name>` are
+  // installed (all three by default); an installed browser is skipped in under a second. The system libraries
+  // are not installed here, they need root: `cd e2e && sudo npx playwright install-deps <browsers>`.
+  const browsers = ['chromium', 'firefox', 'webkit'];
+  const picked = playwrightArgs.flatMap((a, i) =>
+    a === '--project' ? [playwrightArgs[i + 1]] : a.startsWith('--project=') ? [a.slice('--project='.length)] : [],
+  );
+  run('npx', ['playwright', 'install', ...(picked.length && picked.every((p) => browsers.includes(p)) ? picked : browsers)], e2e);
   timed('test', () => run('npx', ['playwright', 'test', ...playwrightArgs], e2e, { E2E_NEXT: major }));
 }

@@ -25,12 +25,12 @@ Status: core, `cookie-prefs/react`, `cookie-prefs/script`, `cookie-prefs/next` a
 ## Commands
 
 - `npm run build`: tsup, ESM + CJS + d.ts into `dist/`
-- `npm test`: vitest (jsdom)
+- `npm test`: vitest, in the `node` environment; a test file that needs a DOM opts into jsdom with a `// @vitest-environment jsdom` comment at its top
 - `npm run typecheck`: `tsc --noEmit`
 - `npm run lint`: ESLint flat config
 - `npm run check:package`: publint and arethetypeswrong (needs a build first)
 - `npm run size`: size-limit, 2 KB gzip budget on the core entry plus budgets for `cookie-prefs/react`, `cookie-prefs/script`, `cookie-prefs/next` and `cookie-prefs/theme` (needs a build first)
-- `npm run e2e -- <14|15|16>`: pack the package, build the Next app in `e2e/` for that major and run the Playwright suite (Chromium); see CONTRIBUTING.md. CI runs it as the `e2e` job; run it when a change touches `cookie-prefs/next`, `cookie-prefs/theme` or the inline script (`cookie-prefs/script`)
+- `npm run e2e -- <14|15|16>`: pack the package, build the Next app in `e2e/` for that major and run the Playwright suite in Chromium, Firefox and WebKit; see CONTRIBUTING.md. CI runs it as the `e2e` job; run it when a change touches `cookie-prefs/next`, `cookie-prefs/theme` or the inline script (`cookie-prefs/script`)
 
 Run lint, typecheck, build, test, check:package and size before finishing a change.
 
