@@ -32,6 +32,40 @@ updates:
       prefix-development: chore
       include: scope
 
+  - package-ecosystem: npm
+    directory: /demo
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Europe/Minsk
+    open-pull-requests-limit: 1
+    labels: [dependencies]
+    commit-message:
+      prefix: chore
+      prefix-development: chore
+      include: scope
+    groups:
+      demo:
+        patterns: ['*']
+
+  - package-ecosystem: npm
+    directory: /demo/gif
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Europe/Minsk
+    open-pull-requests-limit: 1
+    labels: [dependencies]
+    commit-message:
+      prefix: chore
+      prefix-development: chore
+      include: scope
+    groups:
+      demo-gif:
+        patterns: ['*']
+
   - package-ecosystem: github-actions
     directory: /
     schedule:
