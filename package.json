@@ -165,6 +165,16 @@
       ]
     },
     {
+      "name": "cookie-prefs/react (usePref and PrefsProvider only)",
+      "path": "dist/react/index.js",
+      "import": "{ usePref, PrefsProvider }",
+      "limit": "930 B",
+      "gzip": true,
+      "ignore": [
+        "cookie-prefs"
+      ]
+    },
+    {
       "name": "cookie-prefs/next",
       "path": "dist/next/index.js",
       "limit": "440 B",
