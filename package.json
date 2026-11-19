@@ -78,6 +78,26 @@
         "default": "./dist/theme/index.cjs"
       }
     },
+    "./theme/server": {
+      "import": {
+        "types": "./dist/theme/server/index.d.ts",
+        "default": "./dist/theme/server/index.js"
+      },
+      "require": {
+        "types": "./dist/theme/server/index.d.cts",
+        "default": "./dist/theme/server/index.cjs"
+      }
+    },
+    "./theme/next": {
+      "import": {
+        "types": "./dist/theme/next/index.d.ts",
+        "default": "./dist/theme/next/index.js"
+      },
+      "require": {
+        "types": "./dist/theme/next/index.d.cts",
+        "default": "./dist/theme/next/index.cjs"
+      }
+    },
     "./package.json": "./package.json"
   },
   "typesVersions": {
@@ -93,6 +113,12 @@
       ],
       "theme": [
         "./dist/theme/index.d.ts"
+      ],
+      "theme/server": [
+        "./dist/theme/server/index.d.ts"
+      ],
+      "theme/next": [
+        "./dist/theme/next/index.d.ts"
       ]
     }
   },
@@ -144,6 +170,24 @@
       "name": "cookie-prefs/theme",
       "path": "dist/theme/index.js",
       "limit": "1900 B",
+      "gzip": true,
+      "ignore": [
+        "cookie-prefs"
+      ]
+    },
+    {
+      "name": "cookie-prefs/theme/server",
+      "path": "dist/theme/server/index.js",
+      "limit": "255 B",
+      "gzip": true,
+      "ignore": [
+        "cookie-prefs"
+      ]
+    },
+    {
+      "name": "cookie-prefs/theme/next",
+      "path": "dist/theme/next/index.js",
+      "limit": "200 B",
       "gzip": true,
       "ignore": [
         "cookie-prefs"
