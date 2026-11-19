@@ -168,3 +168,5 @@ Prefs are readable by every script on the page: never store secrets. The pre-pai
 ## More
 
 Guides: [Core and React](docs/core.md), [Next.js](docs/nextjs.md), [Reflection](docs/reflection.md), [Theme](docs/theme.md), [Security and non-goals](docs/security.md). Design decisions, verified facts and limitations: [docs/design.md](docs/design.md). Contributing: [CONTRIBUTING.md](CONTRIBUTING.md). License: [MIT](LICENSE).
+
+Roadmap to 1.0: [docs/roadmap.md](docs/roadmap.md).

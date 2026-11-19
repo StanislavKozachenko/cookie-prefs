@@ -43,6 +43,8 @@ Nothing is pushed to `main` directly.
 5. Open a pull request with `Closes #N` in the body; CI runs automatically
 6. A maintainer reviews and merges
 
+Criteria for 1.0 are in [docs/roadmap.md](docs/roadmap.md).
+
 ## Commit style
 
 [Conventional Commits](https://www.conventionalcommits.org/) with a scope, one short lowercase subject line:
