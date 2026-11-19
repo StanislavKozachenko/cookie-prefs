@@ -28,7 +28,8 @@ export const domOf = (kind: Kind | undefined, value: unknown): string | null =>
 /**
  * Mirror a DOM string on `<html>` step by step like the inline script
  * (`src/script/index.ts`), including its one `try` per pref: an invalid class or
- * attribute name stops the targets after it. Never throws.
+ * attribute name stops the targets after it. Never throws. Also used by the provider's
+ * re-apply in `cookie-prefs/react`, through the internal `applyReflection` export.
  */
 export const apply = (targets: readonly string[], kind: Kind | undefined, s: string | null) => {
   const h = document.documentElement;

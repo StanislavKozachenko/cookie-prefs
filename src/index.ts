@@ -179,3 +179,11 @@ export function snapshotPrefs(prefs: PrefsRecord, source: CookieSource): PrefsSn
     }),
   );
 }
+
+/**
+ * Internal, for `cookie-prefs/react`; not part of the public API and may change in any
+ * release. Mirrors one pref's DOM string on `<html>`, the step the store runs on every
+ * change, so `PrefsProvider`'s re-apply shares it instead of carrying a copy.
+ * @internal
+ */
+export { apply as applyReflection } from './core/reflect';
