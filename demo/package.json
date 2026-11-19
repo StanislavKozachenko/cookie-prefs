@@ -8,7 +8,7 @@
     "typecheck": "next typegen && tsc --noEmit"
   },
   "dependencies": {
-    "cookie-prefs": "^0.1.3",
+    "cookie-prefs": "^0.2.0",
     "geist": "^1.9.2",
     "next": "16.4.6",
     "react": "19.3.1",
