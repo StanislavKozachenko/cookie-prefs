@@ -2,7 +2,7 @@
 
 ## Reporting bugs
 
-Open an issue with the entry point (`cookie-prefs`, `cookie-prefs/react`, `cookie-prefs/script`, `cookie-prefs/next`, `cookie-prefs/theme`, `cookie-prefs/theme/server` or `cookie-prefs/theme/next`), the versions of cookie-prefs, React, Next.js and Node.js, and a minimal reproduction.
+Open an issue with the entry point (`cookie-prefs`, `cookie-prefs/react`, `cookie-prefs/react/batch`, `cookie-prefs/script`, `cookie-prefs/next`, `cookie-prefs/theme`, `cookie-prefs/theme/server` or `cookie-prefs/theme/next`), the versions of cookie-prefs, React, Next.js and Node.js, and a minimal reproduction.
 
 ## Development setup
 
@@ -66,6 +66,7 @@ ci: add test matrix
 src/index.ts          cookie-prefs (zero-dependency core)
 src/core/             core internals: builder, cookie, store, sync, reflect, types, standard-schema
 src/react/index.tsx   cookie-prefs/react
+src/react/batch/      cookie-prefs/react/batch
 src/script/index.ts   cookie-prefs/script
 src/next/index.tsx    cookie-prefs/next
 src/theme/index.tsx   cookie-prefs/theme
@@ -75,7 +76,7 @@ e2e/                  Next.js app template, React Router app and Playwright suit
 demo/                 live demo, a standalone Next.js app using cookie-prefs from npm (not published)
 ```
 
-Tests go in the `__tests__` folder next to the code they cover: `src/core/__tests__/`, `src/react/__tests__/`, `src/script/__tests__/`, `src/next/__tests__/`, `src/theme/__tests__/`, `src/theme/server/__tests__/` and `src/theme/next/__tests__/`. Vitest runs `*.test.ts` and `*.test.tsx`; `*.test-d.ts` files are type tests, checked by `npm run typecheck`.
+Tests go in the `__tests__` folder next to the code they cover: `src/core/__tests__/`, `src/react/__tests__/`, `src/react/batch/__tests__/`, `src/script/__tests__/`, `src/next/__tests__/`, `src/theme/__tests__/`, `src/theme/server/__tests__/` and `src/theme/next/__tests__/`. Vitest runs `*.test.ts` and `*.test.tsx`; `*.test-d.ts` files are type tests, checked by `npm run typecheck`.
 
 The core must keep zero runtime dependencies and stay within the 2 KB gzip budget (`npm run size`).
 
