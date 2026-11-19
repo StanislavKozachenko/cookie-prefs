@@ -1,3 +1,4 @@
+import { BatchPanel } from '../../prefs-components/BatchPanel';
 import { PrefsPanel } from '../../prefs-components/PrefsPanel';
 import { ServerValues } from '../../prefs-components/ServerValues';
 
@@ -7,6 +8,7 @@ export default function Page() {
       <h1>Server mode</h1>
       <ServerValues />
       <PrefsPanel />
+      <BatchPanel />
     </main>
   );
 }

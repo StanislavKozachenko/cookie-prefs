@@ -46,9 +46,7 @@ export function usePref<T, V>(pref: Pref<T, V>): [value: V, setValue: PrefSetter
   const snapshot = useContext(Snapshot);
   // `get` and `read` cache the parsed value per raw string, so json and custom prefs
   // return the same object until the cookie changes.
-  const value = useSyncExternalStore(pref.subscribe, pref.get, () =>
-    snapshot ? pref.read(snapshot) : pref.defaultValue,
-  );
+  const value = useSyncExternalStore(pref.subscribe, pref.get, () => pref.read(snapshot));
   useEffect(() => {
     if (seen.has(pref)) return;
     seen.add(pref);
@@ -114,10 +112,7 @@ export interface PrefsProviderProps {
  */
 export function PrefsProvider({ children, snapshot, script, nonce }: PrefsProviderProps): ReactElement {
   const outer = useContext(Snapshot);
-  const merged = useMemo(
-    () => (outer && snapshot ? { ...outer, ...snapshot } : (snapshot ?? outer)),
-    [outer, snapshot],
-  );
+  const merged = useMemo(() => (snapshot ? { ...outer, ...snapshot } : outer), [outer, snapshot]);
   useLayout(() => {
     if (!script) return;
     // Nothing is executed: the config is read back from `script` and applied with DOM
