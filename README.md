@@ -133,6 +133,7 @@ export async function setLocale(locale: string) {
 | `cookie-prefs/theme`  | next-themes compatible `ThemeProvider` and `useTheme`                          | [Theme](docs/theme.md) |
 | `cookie-prefs/theme/next` | Server-only: `getTheme`, the stored theme in the App Router (opt-in)      | [Theme](docs/theme.md#reading-the-theme-on-the-server) |
 | `cookie-prefs/theme/server` | `readTheme`, the stored theme from request cookies on any server        | [Theme](docs/theme.md#reading-the-theme-on-the-server) |
+| `cookie-prefs/theme/color` | `ThemeColor`, keeps `<meta name="theme-color">` in sync with the theme (opt-in) | [Theme](docs/theme.md#browser-ui-colour-theme-color) |
 
 ## Renaming an enum value
 
@@ -160,6 +161,8 @@ density: pref.enum(['compact', 'comfortable']).default('comfortable').migrate({ 
 Props and hook fields keep their next-themes names and defaults; the choice lives in a cookie, and existing `localStorage` themes are moved once. Setup and the full list of differences are in the [Theme guide](docs/theme.md).
 
 To render from the stored theme on the server (`<html className>`), opt in with `await getTheme({ themes })` from `cookie-prefs/theme/next`, or `readTheme(cookieHeader, { themes })` from `cookie-prefs/theme/server` outside Next.js. It makes the route dynamic, returns `'system'` unresolved, and the inline script stays in charge before hydration; see [Reading the theme on the server](docs/theme.md#reading-the-theme-on-the-server).
+
+To colour the browser UI per theme (`<meta name="theme-color">`, next-themes #78), render `<ThemeColor colors={{ light: '#ffffff', dark: '#0a0a0a' }} />` from `cookie-prefs/theme/color` inside `ThemeProvider`. It is right before hydration, follows `setTheme`, the OS scheme, `forcedTheme` and other tabs, and takes precedence over `viewport.themeColor`; see [Browser UI colour](docs/theme.md#browser-ui-colour-theme-color).
 
 ## Security and platform notes
 

@@ -18,6 +18,7 @@
       "cookie-prefs/react/batch": ["./src/react/batch/index.tsx"],
       "cookie-prefs/script": ["./src/script/index.ts"],
       "cookie-prefs/next": ["./src/next/index.tsx"],
+      "cookie-prefs/theme": ["./src/theme/index.tsx"],
       "cookie-prefs/theme/server": ["./src/theme/server/index.ts"]
     }
   },

@@ -12,6 +12,7 @@ export default defineConfig({
       { find: /^cookie-prefs\/react\/batch$/, replacement: src('react/batch/index.tsx') },
       { find: /^cookie-prefs\/script$/, replacement: src('script/index.ts') },
       { find: /^cookie-prefs\/next$/, replacement: src('next/index.tsx') },
+      { find: /^cookie-prefs\/theme$/, replacement: src('theme/index.tsx') },
       { find: /^cookie-prefs\/theme\/server$/, replacement: src('theme/server/index.ts') },
     ],
   },
